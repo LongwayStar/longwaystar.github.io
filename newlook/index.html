@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta content="yes" name="apple-mobile-web-app-capable">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="renderer" content="webkit">
+<meta name="format-detection" content="telephone=no">
+<meta name="format-detection" content="email=no">
+<meta name="format-detection" content="address=no">
+<meta name="format-detection" content="date=no">
+<title>LongwayStar的新主页</title>
+<meta name="keywords" content="LongwayStar的个人网站">
+<meta name="description" content="欢迎访问">
+<style>
+.left{width: 50%}
+.right{width: 50%}
+</style>
+<link rel="stylesheet" id="style-css" href="css/style.css" type="text/css" media="all">
+<script type="text/javascript" src="js/jquery.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/aplayer@1.10.1/dist/APlayer.min.css">
+<link rel="stylesheet" href="https://cdn.staticfile.org/font-awesome/5.12.1/css/all.min.css">
+<link rel="icon" type="image/ico" href="images/title.png">
+</head><body class="home blog">
+<div class="wrapper">
+		<section class="left" style="background-image: url('https://api.ixiaowai.cn/gqapi/gqapi.php');">
+	</section>
+			<section class="right">
+		<div class="index_box">
+	<div class="index_txt">
+		<img src="https://cdn.luogu.com.cn/upload/usericon/427519.png" alt="">
+		<h1>LongwayStar</h1>
+		<p>
+			<a href="https://www.luogu.com.cn/user/427519" target="_blank"><img src="images/Luogu.png" style="width:25px;height: 25px;" /></a>
+			<a href="https://github.com/LongwayStar" target="_blank"><img src="images/Github.png" style="width:25px;height: 25px;" /></a>
+		</p>
+		<h4>每日语录:<h4/>
+		<div class='hitokoto' style="color: #000000;"></div>
+		<br>
+		<div class="menu-%e8%8f%9c%e5%8d%951-container">
+			<ul id="menu-%e8%8f%9c%e5%8d%951" class="index_nav">
+				<li id="menu-item-2" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-2"><a href="https://longwaystar.github.io/">返回旧主页</a></li>
+				<li id="menu-item-2" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-2"><a href="https://longwaystar.blog.luogu.org/" target="_blank">洛谷博客</a></li>
+				<li id="menu-item-2" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-2"><a href="https://space.bilibili.com/673847297?spm_id_from=333.1007.0.0" target="_blank">bilibili主页</a></li>
+			</ul>
+		</div>	
+	</div>
+	<div id="aplayer" class="aplayer" data-order="random" data-id="5210965038" data-server="netease" data-type="playlist" data-fixed="true" data-autoplay="true" data-volume="0.8"></div>
+    <script src="https://cdn.staticfile.org/jquery/3.2.1/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/aplayer@1.10.1/dist/APlayer.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/meting@1.2.0/dist/Meting.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/kaygb/kaygb@master/layer/layer.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/kaygb/kaygb@master/js/v3.js"></script>
+</div><footer class="right_foot">
+	
+	<div class="right_f_l">
+		<p>
+			<span>2022 by LongwayStar</span>
+		</p>
+	</div>
+</footer>
+</section>
+</div>
+<script type='text/javascript'>
+	$.get("https://v1.hitokoto.cn/",function(data,status){
+		if (status == 'success'){
+			$('.hitokoto').text(data.hitokoto);
+		}else{
+			$('.hitokoto').text('获取出错！');
+		}
+	});
+	</script>
+<script type="text/javascript" src="js/js.js"></script>
+</body>
+</html>
