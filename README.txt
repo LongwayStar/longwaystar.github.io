@@ -1,3 +1,3 @@
-# longwaystar.github.io
-I'm trying
-coding....
+这是我的个人网站，目前正处于beta阶段，欢迎各位大佬提出建议
+目前版本:BETA0.1
+正在积极构建中....
