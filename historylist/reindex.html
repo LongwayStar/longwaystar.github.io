@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="LongwayStar的个人网站" />
-    <meta name="author" content="LongwayStar的个人主页" />
-    <link rel="icon" href="lib/icons/title.png" />
-    <title>LongWeb-Home</title>
+    <meta name="description" content="LongwayStar的历史版本列表" />
+    <meta name="author" content="LongwayStar" />
+    <link rel="icon" href="../lib/icons/title.png" />
+    <title>LongWeb-Historylist</title>
     <style>
         :root {
             --bg-body: #f0f8fc;
@@ -21,8 +21,6 @@
             --cyan-200: #A5F3FC;
             --cyan-100: #CFFAFE;
             --cyan-50: #ECFEFF;
-            --accent-light: #CFFAFE;
-            --accent-dark: #06B6D4;
             --btn-bg: #06B6D4;
             --btn-text: #fff;
             --footer-color: #4a5a6a;
@@ -34,8 +32,6 @@
             --text-secondary: #c0d0e0;
             --shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
             --border-color: rgba(103, 232, 249, 0.25);
-            --accent-light: #1a3a44;
-            --accent-dark: #67E8F9;
             --btn-bg: #67E8F9;
             --btn-text: #0a1a22;
             --footer-color: #8aa0b0;
@@ -135,7 +131,7 @@
             font-size: 1.6rem;
             font-weight: 500;
             color: var(--text-primary);
-            margin-bottom: 0.75rem;
+            margin-bottom: 1rem;
             letter-spacing: 0.02em;
             position: relative;
             display: inline-block;
@@ -152,31 +148,30 @@
             background: linear-gradient(90deg, var(--cyan-300), var(--cyan-500));
             opacity: 0.5;
         }
-        .card .avatar {
-            display: block;
-            margin: 0.5rem auto 0.2rem;
-            border-radius: 50%;
-            border: 3px solid var(--cyan-200);
-            transition: border-color 0.3s ease, transform 0.3s ease;
-            width: 100px;
-            height: 100px;
-            object-fit: cover;
-        }
-        .card .avatar:hover {
-            transform: scale(1.02);
-            border-color: var(--cyan-500);
-        }
-        .card cite {
-            display: block;
-            font-style: normal;
-            font-size: 1.1rem;
-            font-weight: 450;
+        .card p {
+            margin-top: 0.5rem;
             color: var(--text-secondary);
-            margin: 0.3rem 0 0.6rem;
+            font-size: 1rem;
+            line-height: 1.8;
+        }
+        .card .version-list {
+            display: inline-block;
+            text-align: left;
+            margin: 0.5rem auto 0;
+            padding-left: 0;
+            list-style: none;
+            color: var(--text-secondary);
+            font-size: 1rem;
+            line-height: 2;
+        }
+        .card .version-list li::before {
+            content: "• ";
+            color: var(--cyan-500);
+            font-weight: bold;
         }
         .card .link-btn {
             display: inline-block;
-            margin-top: 0.2rem;
+            margin-top: 0.5rem;
             padding: 0.5rem 1.8rem;
             background: var(--cyan-500);
             color: #fff;
@@ -193,37 +188,6 @@
             color: #0a1a22;
             transform: translateY(-2px);
             box-shadow: 0 8px 20px rgba(6, 182, 212, 0.35);
-        }
-        .link-group {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 1.2rem 2rem;
-            margin-top: 0.5rem;
-        }
-        .link-group a {
-            color: var(--cyan-500);
-            text-decoration: none;
-            font-weight: 500;
-            font-size: 1rem;
-            padding: 0.4rem 0.8rem;
-            border-radius: 30px;
-            background: var(--cyan-50);
-            transition: all 0.2s ease;
-            border: 1px solid transparent;
-        }
-        [data-theme="dark"] .link-group a {
-            background: rgba(103, 232, 249, 0.12);
-            color: var(--cyan-300);
-        }
-        .link-group a:hover {
-            background: var(--cyan-200);
-            color: #0a1a22;
-            border-color: var(--cyan-500);
-        }
-        [data-theme="dark"] .link-group a:hover {
-            background: var(--cyan-300);
-            color: #0a1a22;
         }
         .footer {
             margin-top: 2rem;
@@ -271,10 +235,6 @@
             .card h2 {
                 font-size: 1.3rem;
             }
-            .card .avatar {
-                width: 80px;
-                height: 80px;
-            }
             .theme-toggle {
                 top: 0.8rem;
                 right: 0.8rem;
@@ -285,21 +245,10 @@
             .theme-toggle .icon {
                 font-size: 1rem;
             }
-            .link-group {
-                gap: 0.8rem;
-            }
-            .card .link-btn {
-                padding: 0.4rem 1.4rem;
-                font-size: 0.9rem;
-            }
         }
         @media (max-width: 400px) {
             .header h1 {
                 font-size: 1.5rem;
-            }
-            .card .avatar {
-                width: 68px;
-                height: 68px;
             }
         }
     </style>
@@ -311,41 +260,24 @@
     </button>
     <div class="container">
         <header class="header">
-            <h1>欢迎访问 LongwWeb!</h1>
+            <h1>历史版本列表</h1>
             <hr />
         </header>
         <section class="card">
-            <h2>关于 Github</h2>
-            <img
-                class="avatar"
-                src="https://avatars.githubusercontent.com/u/88468680?v=4&size=64"
-                alt="my Github avatar"
-                width="100"
-                height="100"
-            />
-            <cite>LongwayStar</cite>
-            <br />
-            <a class="link-btn" href="https://github.com/LongwayStar" target="_blank">我的Github账号</a>
+            <h2>BETA 版本</h2>
+            <ul class="version-list">
+                <li>BETA0.1 第一个版本</li>
+                <li>BETA0.2 取消了音乐播放控件</li>
+                <li>BETA0.21 分别为旧主页和新主页加上了历史版本列表</li>
+                <li>BETA0.22 网站更名为"LongWeb"，取消洛谷相关链接</li>
+                <li>BETA0.23 旧版主页更换背景与卡片，增加B站链接</li>
+            </ul>
         </section>
         <section class="card">
-            <h2>关于 B站</h2>
-            <img
-                class="avatar"
-                src="https://i2.hdslb.com/bfs/face/4df4d3a1075896637097d6edf3d69d9ab20aace7.jpg@128w_128h_1c_1s.webp"
-                alt="my bilibili avatar"
-                width="100"
-                height="100"
-            />
-            <cite>LongwayStar</cite>
-            <br />
-            <a class="link-btn" href="https://space.bilibili.com/673847297" target="_blank">我的Bilibili账号</a>
-        </section>
-        <section class="card">
-            <h2>关于其他主页</h2>
-            <div class="link-group">
-                <a href="newlook/index.html">新主页(测试中)</a>
-                <a href="historylist/index.html">历史版本列表</a>
-            </div>
+            <h2>关于新主页</h2>
+            <p>
+                <a class="link-btn" href="../index.html">返回主页</a>
+            </p>
         </section>
     </div>
     <footer class="footer">
