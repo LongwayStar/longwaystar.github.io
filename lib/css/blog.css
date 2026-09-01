@@ -73,6 +73,18 @@
     padding: 2rem 0;
     font-size: 1rem;
 }
+/* 博客加载中提示 */
+.blog-loading {
+    color: var(--text-secondary);
+    padding: 2rem 0;
+    font-size: 1rem;
+    text-align: center;
+    animation: blogLoadingPulse 1.2s ease-in-out infinite;
+}
+@keyframes blogLoadingPulse {
+    0%, 100% { opacity: 0.45; }
+    50% { opacity: 1; }
+}
 
 /* 文章小卡片：横向长度为正常卡片的 90% */
 .blog-item {
