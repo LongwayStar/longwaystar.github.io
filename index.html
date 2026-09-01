@@ -7,132 +7,98 @@
     <meta name="author" content="LongwayStar的个人主页" />
     <link rel="icon" href="lib/icons/new_title.ico" />
     <link rel="stylesheet" href="lib/css/generalstyle.css" />
-    <title>LongWeb-Home</title>
-    <style>
-        .card h2 {
-            margin-bottom: 0.75rem;
-        }
-        .card .avatar {
-            display: block;
-            margin: 0.5rem auto 0.2rem;
-            border-radius: 50%;
-            border: 3px solid var(--cyan-200);
-            transition: border-color 0.3s ease, transform 0.3s ease;
-            width: 100px;
-            height: 100px;
-            object-fit: cover;
-        }
-        .card .avatar:hover {
-            transform: scale(1.02);
-            border-color: var(--cyan-500);
-        }
-        .card cite {
-            display: block;
-            font-style: normal;
-            font-size: 1.1rem;
-            font-weight: 450;
-            color: var(--text-secondary);
-            margin: 0.3rem 0 0.6rem;
-        }
-        .card .link-btn {
-            margin-top: 0.2rem;
-        }
-        .link-group {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 1.2rem 2rem;
-            margin-top: 0.5rem;
-        }
-        .link-group a {
-            color: var(--cyan-500);
-            text-decoration: none;
-            font-weight: 500;
-            font-size: 1rem;
-            padding: 0.4rem 0.8rem;
-            border-radius: 30px;
-            background: var(--cyan-50);
-            transition: all 0.2s ease;
-            border: 1px solid transparent;
-        }
-        [data-theme="dark"] .link-group a {
-            background: rgba(103, 232, 249, 0.12);
-            color: var(--cyan-300);
-        }
-        .link-group a:hover {
-            background: var(--cyan-200);
-            color: #0a1a22;
-            border-color: var(--cyan-500);
-        }
-        [data-theme="dark"] .link-group a:hover {
-            background: var(--cyan-300);
-            color: #0a1a22;
-        }
-        @media (max-width: 600px) {
-            .card .avatar {
-                width: 80px;
-                height: 80px;
-            }
-            .link-group {
-                gap: 0.8rem;
-            }
-            .card .link-btn {
-                padding: 0.4rem 1.4rem;
-                font-size: 0.9rem;
-            }
-        }
-        @media (max-width: 400px) {
-            .card .avatar {
-                width: 68px;
-                height: 68px;
-            }
-        }
-    </style>
+    <title>LongWeb</title>
 </head>
 <body>
-    <button class="theme-toggle" id="themeToggle" aria-label="切换暗色/亮色模式">
-        <span class="icon" id="themeIcon">🌙</span>
-        <span id="themeLabel">暗色</span>
-    </button>
-    <div class="container">
-        <header class="header">
-            <h1>欢迎访问 LongwWeb!</h1>
-            <hr />
-        </header>
-        <section class="card">
-            <h2>关于 Github</h2>
-            <img
-                class="avatar"
-                src="https://avatars.githubusercontent.com/u/88468680?v=4&size=64"
-                alt="my Github avatar"
-                width="100"
-                height="100"
-            />
-            <cite>LongwayStar</cite>
-            <br />
-            <a class="link-btn" href="https://github.com/LongwayStar" target="_blank">我的Github账号</a>
-        </section>
-        <section class="card">
-            <h2>关于 B站</h2>
-            <img
-                class="avatar"
-                src="https://i2.hdslb.com/bfs/face/4df4d3a1075896637097d6edf3d69d9ab20aace7.jpg@128w_128h_1c_1s.webp"
-                alt="my bilibili avatar"
-                width="100"
-                height="100"
-            />
-            <cite>LongwayStar</cite>
-            <br />
-            <a class="link-btn" href="https://space.bilibili.com/673847297" target="_blank">我的Bilibili账号</a>
-        </section>
-        <section class="card">
-            <h2>关于其他主页</h2>
-            <div class="link-group">
-                <a href="newlook/index.html">新主页(测试中)</a>
-                <a href="historylist/index.html">历史版本列表</a>
+    <div class="layout" id="layout">
+        <button class="sidebar-toggle" id="sidebarToggle" aria-label="收起或展开侧边栏" title="收起/展开"></button>
+        <!-- 左侧边栏 -->
+        <aside class="sidebar" aria-label="主导航">
+            <div class="tabs" role="tablist">
+                <button class="tab active" id="tabBtn-home" role="tab" aria-selected="true" data-tab="home">主页</button>
+                <button class="tab" id="tabBtn-blog" role="tab" aria-selected="false" data-tab="blog">我的博客</button>
+                <button class="tab" id="tabBtn-history" role="tab" aria-selected="false" data-tab="history">历史版本</button>
             </div>
-        </section>
+            <button class="theme-toggle" id="themeToggle" aria-label="切换暗色/亮色模式">
+                <span class="icon" id="themeIcon">🌙</span>
+                <span id="themeLabel">暗色</span>
+            </button>
+        </aside>
+
+        <!-- 右侧主内容区 -->
+        <main class="main">
+            <div class="container">
+                <!-- 主页面板 -->
+                <section id="tab-home" class="tab-panel active" role="tabpanel" aria-labelledby="tabBtn-home">
+                    <header class="header">
+                        <h1>欢迎访问 LongwWeb!</h1>
+                        <hr />
+                    </header>
+                    <section class="card">
+                        <h2>关于 Github</h2>
+                        <img
+                            class="avatar"
+                            src="https://avatars.githubusercontent.com/u/88468680?v=4&size=64"
+                            alt="my Github avatar"
+                            width="100"
+                            height="100"
+                        />
+                        <cite>LongwayStar</cite>
+                        <br />
+                        <a class="link-btn" href="https://github.com/LongwayStar" target="_blank">我的Github账号</a>
+                    </section>
+                    <section class="card">
+                        <h2>关于 B站</h2>
+                        <img
+                            class="avatar"
+                            src="https://i2.hdslb.com/bfs/face/4df4d3a1075896637097d6edf3d69d9ab20aace7.jpg@128w_128h_1c_1s.webp"
+                            alt="my bilibili avatar"
+                            width="100"
+                            height="100"
+                        />
+                        <cite>LongwayStar</cite>
+                        <br />
+                        <a class="link-btn" href="https://space.bilibili.com/673847297" target="_blank">我的Bilibili账号</a>
+                    </section>
+                    <section class="card">
+                        <h2>关于其他主页</h2>
+                        <div class="link-group">
+                            <a href="newlook/index.html">新主页(测试中)</a>
+                        </div>
+                    </section>
+                </section>
+
+                <!-- 我的博客面板 -->
+                <section id="tab-blog" class="tab-panel" role="tabpanel" aria-labelledby="tabBtn-blog">
+                    <header class="header">
+                        <h1>我的博客</h1>
+                        <hr />
+                    </header>
+                    <section class="card">
+                        <h2>我的博客</h2>
+                        <p>正在开发</p>
+                    </section>
+                </section>
+
+                <!-- 历史版本面板 -->
+                <section id="tab-history" class="tab-panel" role="tabpanel" aria-labelledby="tabBtn-history">
+                    <header class="header">
+                        <h1>历史版本列表</h1>
+                        <hr />
+                    </header>
+                    <section class="card" id="betaCard">
+                        <h2>Beta 版本</h2>
+                        <div id="betaContent"><div class="loading">加载中...</div></div>
+                    </section>
+                    <section class="card" id="releaseCard">
+                        <h2>RELEASE 版本</h2>
+                        <div id="releaseContent"><div class="loading">加载中...</div></div>
+                    </section>
+                </section>
+            </div>
+        </main>
     </div>
+
     <footer class="footer">
         <div class="footer-content">
             <p>Powered by GithubPages</p>
@@ -142,6 +108,19 @@
     </footer>
     <script>
         (function() {
+            /* ===== 侧边栏收起 / 展开 ===== */
+            const layout = document.getElementById('layout');
+            const sidebarToggle = document.getElementById('sidebarToggle');
+            function toggleSidebar() {
+                const collapsed = layout.classList.toggle('collapsed');
+                sidebarToggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+                sidebarToggle.title = collapsed ? '展开侧边栏' : '收起侧边栏';
+            }
+            if (sidebarToggle) {
+                sidebarToggle.addEventListener('click', toggleSidebar);
+            }
+
+            /* ===== 主题切换 ===== */
             const toggleBtn = document.getElementById('themeToggle');
             const icon = document.getElementById('themeIcon');
             const label = document.getElementById('themeLabel');
@@ -181,6 +160,77 @@
                     updateButton(newTheme);
                 }
             });
+
+            /* ===== 侧边栏标签切换（hash 驱动） ===== */
+            const tabs = document.querySelectorAll('.tab');
+            const panels = document.querySelectorAll('.tab-panel');
+            let historyLoaded = false;
+
+            function showTab(name) {
+                let active = false;
+                tabs.forEach(function(t) {
+                    const isActive = (t.dataset.tab === name);
+                    t.classList.toggle('active', isActive);
+                    t.setAttribute('aria-selected', isActive ? 'true' : 'false');
+                    if (isActive) active = true;
+                });
+                panels.forEach(function(p) {
+                    const isActive = (p.id === 'tab-' + name);
+                    p.classList.toggle('active', isActive);
+                });
+                if (!active) name = 'home';
+                if (history.replaceState) {
+                    history.replaceState(null, '', '#' + name);
+                }
+                if (name === 'history') loadHistory();
+            }
+
+            tabs.forEach(function(t) {
+                t.addEventListener('click', function() {
+                    showTab(t.dataset.tab);
+                });
+            });
+
+            // 初始：根据 hash 或默认主页
+            const initial = ['#home', '#blog', '#history'].includes(location.hash) ? location.hash.slice(1) : 'home';
+            showTab(initial);
+
+            /* ===== 历史版本数据懒加载（首次显示时拉取一次） ===== */
+            async function loadVersionList(fileName, containerId) {
+                const container = document.getElementById(containerId);
+                // 相对于根目录 index.html 的路径
+                const baseUrl = 'lib/words/historylist/';
+                const encodedFile = encodeURIComponent(fileName);
+                const url = baseUrl + encodedFile;
+                try {
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error('HTTP ' + response.status);
+                    const text = await response.text();
+                    const lines = text.split('\n').filter(line => line.trim() !== '');
+                    if (lines.length === 0) {
+                        container.innerHTML = '<div class="error">暂无版本记录</div>';
+                        return;
+                    }
+                    let ul = document.createElement('ul');
+                    ul.className = 'version-list';
+                    lines.forEach(function(line) {
+                        let li = document.createElement('li');
+                        li.textContent = line.trim();
+                        ul.appendChild(li);
+                    });
+                    container.innerHTML = '';
+                    container.appendChild(ul);
+                } catch (error) {
+                    container.innerHTML = '<div class="error">加载失败: ' + error.message + '</div>';
+                }
+            }
+
+            function loadHistory() {
+                if (historyLoaded) return;
+                historyLoaded = true;
+                loadVersionList('BETA版本.txt', 'betaContent');
+                loadVersionList('RELEASE版本.txt', 'releaseContent');
+            }
         })();
     </script>
 </body>
