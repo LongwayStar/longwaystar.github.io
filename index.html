@@ -17,8 +17,13 @@
             <div class="tabs" role="tablist">
                 <button class="tab active" id="tabBtn-home" role="tab" aria-selected="true" data-tab="home">主页</button>
                 <button class="tab" id="tabBtn-blog" role="tab" aria-selected="false" data-tab="blog">我的博客</button>
-                <button class="tab" id="tabBtn-history" role="tab" aria-selected="false" data-tab="history">历史版本</button>
+                <button class="tab" id="tabBtn-empty" role="tab" aria-selected="false" data-tab="empty">空白页面</button>
+                <button class="tab" id="tabBtn-history" role="tab" aria-selected="false" data-tab="history">历史版本</button>                
             </div>
+            <button class="refresh-bg" id="refreshBg" aria-label="刷新背景" title="刷新背景">
+                <span class="icon" id="refreshIcon">🔄</span>
+                <span id="refreshLabel">刷新背景</span>
+            </button>
             <button class="theme-toggle" id="themeToggle" aria-label="切换暗色/亮色模式">
                 <span class="icon" id="themeIcon">🌙</span>
                 <span id="themeLabel">暗色</span>
@@ -31,14 +36,14 @@
                 <!-- 主页面板 -->
                 <section id="tab-home" class="tab-panel active" role="tabpanel" aria-labelledby="tabBtn-home">
                     <header class="header">
-                        <h1>欢迎访问 LongwWeb!</h1>
+                        <h1>欢迎访问 LongWeb!</h1>
                         <hr />
                     </header>
                     <section class="card">
-                        <h2>关于 Github</h2>
+                        <h2>关于Github</h2>
                         <img
                             class="avatar"
-                            src="https://avatars.githubusercontent.com/u/88468680?v=4&size=64"
+                            src="https://avatars.githubusercontent.com/u/88468680?v=4&size=128"
                             alt="my Github avatar"
                             width="100"
                             height="100"
@@ -48,7 +53,7 @@
                         <a class="link-btn" href="https://github.com/LongwayStar" target="_blank">我的Github账号</a>
                     </section>
                     <section class="card">
-                        <h2>关于 B站</h2>
+                        <h2>关于B站</h2>
                         <img
                             class="avatar"
                             src="https://i2.hdslb.com/bfs/face/4df4d3a1075896637097d6edf3d69d9ab20aace7.jpg@128w_128h_1c_1s.webp"
@@ -61,7 +66,7 @@
                         <a class="link-btn" href="https://space.bilibili.com/673847297" target="_blank">我的Bilibili账号</a>
                     </section>
                     <section class="card">
-                        <h2>关于其他主页</h2>
+                        <h2>关于其他页面</h2>
                         <div class="link-group">
                             <a href="newlook/index.html">新主页(测试中)</a>
                         </div>
@@ -78,6 +83,10 @@
                         <h2>我的博客</h2>
                         <p>正在开发</p>
                     </section>
+                </section>
+
+                <!-- 空白页面面板 -->
+                <section id="tab-empty" class="tab-panel" role="tabpanel" aria-labelledby="tabBtn-empty">
                 </section>
 
                 <!-- 历史版本面板 -->
@@ -102,8 +111,8 @@
     <footer class="footer">
         <div class="footer-content">
             <p>Powered by GithubPages</p>
-            <p>Coded by Deepseek</p>
-            <p>Created by LongwayStar</p>
+            <p>Coded by Deepseek&LongwayStar</p>
+            <p>Created by LongwayStar in 2026</p>
         </div>
     </footer>
     <script>
@@ -139,10 +148,10 @@
             function updateButton(theme) {
                 if (theme === 'dark') {
                     icon.textContent = '☀️';
-                    label.textContent = '亮色';
+                    label.textContent = '浅色模式';
                 } else {
                     icon.textContent = '🌙';
-                    label.textContent = '暗色';
+                    label.textContent = '深色模式';
                 }
             }
             toggleBtn.addEventListener('click', function() {
@@ -159,6 +168,24 @@
                     html.setAttribute('data-theme', newTheme);
                     updateButton(newTheme);
                 }
+            });
+
+            /* ===== 刷新背景 ===== */
+            const refreshBgBtn = document.getElementById('refreshBg');
+            const body = document.body;
+            refreshBgBtn.addEventListener('click', function() {
+                const baseUrl = 'https://t.alcy.cc/ycy';
+                const newUrl = baseUrl + '?t=' + Date.now(); // 添加时间戳避免缓存
+                // 创建图片对象预加载，确保加载成功后再设置为背景
+                const img = new Image();
+                img.onload = function() {
+                    body.style.backgroundImage = 'url("' + newUrl + '")';
+                };
+                img.onerror = function() {
+                // 即使加载失败也尝试设置（可能服务暂时无响应，但至少更新了 URL）
+                body.style.backgroundImage = 'url("' + newUrl + '")';
+                };
+                img.src = newUrl;
             });
 
             /* ===== 侧边栏标签切换（hash 驱动） ===== */
@@ -192,7 +219,7 @@
             });
 
             // 初始：根据 hash 或默认主页
-            const initial = ['#home', '#blog', '#history'].includes(location.hash) ? location.hash.slice(1) : 'home';
+            const initial = ['#home', '#blog', '#empty', '#history'].includes(location.hash) ? location.hash.slice(1) : 'home';
             showTab(initial);
 
             /* ===== 历史版本数据懒加载（首次显示时拉取一次） ===== */
