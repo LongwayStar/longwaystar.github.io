@@ -9,6 +9,7 @@
     --bg-card: rgba(255, 255, 255, 0.62);
     --bg-glass: rgba(255, 255, 255, 0.5);
     --bg-blur: 8px;
+    --sidebar-w: 220px;
     --text-primary: #1a2a3a;
     --text-secondary: #2c3e50;
     --shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
@@ -78,7 +79,7 @@ body {
     top: 0;
     left: 0;
     z-index: 60;
-    width: 220px;
+    width: var(--sidebar-w);
     height: 48px;
     display: flex;
     align-items: center;
@@ -112,7 +113,7 @@ body {
     z-index: 40;
     height: 100vh;
     flex-shrink: 0;
-    width: 220px;
+    width: var(--sidebar-w);
     overflow: hidden;
     display: flex;
     flex-direction: column;
@@ -273,9 +274,8 @@ body {
 .main {
     flex: 1;
     min-width: 0;
-    margin-left: 220px;
+    margin-left: var(--sidebar-w);
     padding: 1.2rem 1.5rem 1rem;
-    overflow-x: hidden;
     transition: margin-left 0.3s ease;
 }
 .layout.collapsed .main {
@@ -519,11 +519,10 @@ body {
 
 /* 平板 / 小笔记本：压缩边栏 */
 @media (max-width: 820px) {
-    .sidebar {
-        width: 170px;
+    :root {
+        --sidebar-w: 170px;
     }
     .main {
-        margin-left: 170px;
         padding: 1rem 1rem 1rem 1.25rem;
     }
     .layout.collapsed .main {
@@ -666,4 +665,38 @@ body {
     .footer-content p {
         font-size: 0.75rem;
     }
+}
+
+/* ============================================================
+   设置与相关面板 (tab-settings)
+   ============================================================ */
+#tab-settings .card {
+    text-align: center;
+}
+/* 壁纸操作按钮组：横排、统一按钮外观 */
+#tab-settings .bg-actions {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-top: 0.8rem;
+}
+#tab-settings .bg-actions .link-btn {
+    font-family: inherit;
+    cursor: pointer;
+    border: 1px solid transparent;
+    line-height: 1.5;
+}
+/* 致谢名单列表：左对齐、行距舒适（无圆点前缀） */
+#tab-settings .version-list {
+    display: inline-block;
+    text-align: left;
+    margin: 0.5rem auto 0;
+    padding-left: 0;
+    list-style: none;
+    color: var(--text-secondary);
+    font-size: 1rem;
+    line-height: 2;
+    width: 100%;
+    max-width: 480px;
 }

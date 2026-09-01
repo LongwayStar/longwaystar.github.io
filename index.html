@@ -7,6 +7,7 @@
     <meta name="author" content="LongwayStar的个人主页" />
     <link rel="icon" href="lib/icons/new_title.ico" />
     <link rel="stylesheet" href="lib/css/generalstyle.css" />
+    <link rel="stylesheet" href="lib/css/blog.css" />
     <title>LongWeb</title>
 </head>
 <body>
@@ -18,7 +19,8 @@
                 <button class="tab active" id="tabBtn-home" role="tab" aria-selected="true" data-tab="home">主页</button>
                 <button class="tab" id="tabBtn-blog" role="tab" aria-selected="false" data-tab="blog">我的博客</button>
                 <button class="tab" id="tabBtn-empty" role="tab" aria-selected="false" data-tab="empty">空白页面</button>
-                <button class="tab" id="tabBtn-history" role="tab" aria-selected="false" data-tab="history">历史版本</button>                
+                <button class="tab" id="tabBtn-history" role="tab" aria-selected="false" data-tab="history">历史版本</button>
+                <button class="tab" id="tabBtn-settings" role="tab" aria-selected="false" data-tab="settings">设置与相关</button>
             </div>
             <button class="refresh-bg" id="refreshBg" aria-label="刷新背景" title="刷新背景">
                 <span class="icon" id="refreshIcon">🔄</span>
@@ -76,14 +78,52 @@
 
                 <!-- 我的博客面板 -->
                 <section id="tab-blog" class="tab-panel" role="tabpanel" aria-labelledby="tabBtn-blog">
-                    <header class="header">
+                    <!-- ① 标题部分（页眉式） -->
+                    <header class="blog-header">
                         <h1>我的博客</h1>
-                        <hr />
+                        <span class="blog-stat" id="blogStat">本站已有 <strong>0</strong> 篇文章</span>
                     </header>
-                    <section class="card">
-                        <h2>我的博客</h2>
-                        <p>正在开发</p>
-                    </section>
+
+                    <div class="blog-layout">
+                        <!-- ② 文章浏览区 -->
+                        <div class="blog-browse" id="blogBrowse">
+                            <!-- 列表态 -->
+                            <div id="blogListView">
+                                <div id="blogCardList" class="blog-list"></div>
+                            </div>
+                            <!-- 阅读态 -->
+                            <div class="blog-read-view" id="blogReadView">
+                                <button class="blog-back" id="blogBack" title="返回列表" aria-label="返回列表">
+                                    <img src="lib/icons/back.ico" alt="返回" />
+                                </button>
+                                <h2 class="blog-read-title" id="blogReadTitle"></h2>
+                                <div class="blog-read-meta" id="blogReadMeta"></div>
+                                <div class="blog-read-content" id="blogReadContent"></div>
+                            </div>
+                        </div>
+
+                        <!-- ③ 文章筛选区 -->
+                        <aside class="blog-filter" id="blogFilterPanel">
+                            <h3>筛选与排序</h3>
+                            <label class="blog-filter-label" for="blogSearchName">按名称搜索（模糊）</label>
+                            <input type="search" id="blogSearchName" placeholder="输入文章名称..." aria-label="按名称搜索文章" />
+                            <label class="blog-filter-label" for="blogSearchTheme">按主题筛选（精确）</label>
+                            <input type="text" id="blogSearchTheme" placeholder="输入主题，如：技术" aria-label="按主题筛选文章" />
+                            <div class="blog-sort-group">
+                                <div class="blog-sort-row">
+                                    <button class="blog-sort-btn" id="blogSortName">按名称</button>
+                                    <button class="blog-sort-btn" id="blogSortTime">按时间</button>
+                                </div>
+                                <div class="blog-sort-row">
+                                    <button class="blog-sort-btn" id="blogSortDir" disabled>升序 ↑</button>
+                                    <button class="blog-sort-btn" id="blogSortReset">取消</button>
+                                </div>
+                            </div>
+                        </aside>
+                    </div>
+
+                    <!-- ④ 页面选择区 -->
+                    <nav class="blog-pager" id="blogPager" aria-label="分页"></nav>
                 </section>
 
                 <!-- 空白页面面板 -->
@@ -96,13 +136,31 @@
                         <h1>历史版本列表</h1>
                         <hr />
                     </header>
+                    <section class="card" id="releaseCard">
+                        <h2>Release 版本</h2>
+                        <div id="releaseContent"><div class="loading">加载中...</div></div>
+                    </section>
                     <section class="card" id="betaCard">
                         <h2>Beta 版本</h2>
                         <div id="betaContent"><div class="loading">加载中...</div></div>
                     </section>
-                    <section class="card" id="releaseCard">
-                        <h2>RELEASE 版本</h2>
-                        <div id="releaseContent"><div class="loading">加载中...</div></div>
+                </section>
+
+                <!-- 设置与相关面板 -->
+                <section id="tab-settings" class="tab-panel" role="tabpanel" aria-labelledby="tabBtn-settings">
+                    <header class="header">
+                        <h1>设置与相关</h1>
+                        <hr />
+                    </header>
+                    <section class="card">
+                        <h2>关于壁纸</h2>
+                        <div class="bg-actions">
+                            <button class="link-btn" id="settingsRefreshBg" type="button">刷新背景</button>
+                        </div>
+                    </section>
+                    <section class="card">
+                        <h2>致谢名单</h2>
+                        <div id="thanksContent"><div class="loading">加载中...</div></div>
                     </section>
                 </section>
             </div>
@@ -118,6 +176,10 @@
     </footer>
     <script>
         (function() {
+            /* ===== 模块状态（提前声明，避免 TDZ：刷新直达历史/设置页时立即加载） ===== */
+            let historyLoaded = false;
+            let thanksLoaded = false;
+
             /* ===== 侧边栏收起 / 展开 ===== */
             const layout = document.getElementById('layout');
             const sidebarToggle = document.getElementById('sidebarToggle');
@@ -171,28 +233,42 @@
                 }
             });
 
-            /* ===== 刷新背景 ===== */
-            const refreshBgBtn = document.getElementById('refreshBg');
+            /* ===== 刷新 / 下载背景 ===== */
             const body = document.body;
-            refreshBgBtn.addEventListener('click', function() {
-                const baseUrl = 'https://t.alcy.cc/ycy';
-                const newUrl = baseUrl + '?t=' + Date.now(); // 添加时间戳避免缓存
-                // 创建图片对象预加载，确保加载成功后再设置为背景
+            let currentBgUrl = '';    // 当前背景的最终稳定 URL（经重定向后的真实图片地址）
+
+            function backgroundUrl() {
+                return 'https://t.alcy.cc/ycy?t=' + Date.now();
+            }
+            // 刷新背景：img 加载（跨域无需 CORS），加载后读取 currentSrc 得到最终稳定 URL
+            function refreshBackground() {
+                const newUrl = backgroundUrl();
                 const img = new Image();
                 img.onload = function() {
-                    body.style.backgroundImage = 'url("' + newUrl + '")';
+                    // currentSrc 为重定向后的真实图片地址（稳定静态文件，与屏幕显示一致）
+                    currentBgUrl = img.currentSrc || newUrl;
+                    body.style.backgroundImage = 'url("' + currentBgUrl + '")';
                 };
                 img.onerror = function() {
-                // 即使加载失败也尝试设置（可能服务暂时无响应，但至少更新了 URL）
-                body.style.backgroundImage = 'url("' + newUrl + '")';
+                    // 加载失败也设置背景（可能服务暂时无响应，但至少更新 URL）
+                    body.style.backgroundImage = 'url("' + newUrl + '")';
                 };
                 img.src = newUrl;
-            });
+            }
+            // 下载背景功能已移除（跨域限制下无法可靠下载当前背景）
+            const refreshBgBtn = document.getElementById('refreshBg');
+            refreshBgBtn.addEventListener('click', refreshBackground);
+            const settingsRefreshBtn = document.getElementById('settingsRefreshBg');
+            if (settingsRefreshBtn) settingsRefreshBtn.addEventListener('click', refreshBackground);
+
+            // 页面加载后：若从未刷新过，主动刷新一次以记录当前背景的稳定 URL
+            (function initBackground() {
+                if (!currentBgUrl) refreshBackground();
+            })();
 
             /* ===== 侧边栏标签切换（hash 驱动） ===== */
             const tabs = document.querySelectorAll('.tab');
             const panels = document.querySelectorAll('.tab-panel');
-            let historyLoaded = false;
 
             function showTab(name) {
                 let active = false;
@@ -210,7 +286,11 @@
                 if (history.replaceState) {
                     history.replaceState(null, '', '#' + name);
                 }
+                if (name === 'blog' && window.BlogModule) {
+                    window.BlogModule.ensureLoaded();
+                }
                 if (name === 'history') loadHistory();
+                if (name === 'settings') loadThanks();
             }
 
             tabs.forEach(function(t) {
@@ -220,7 +300,7 @@
             });
 
             // 初始：根据 hash 或默认主页
-            const initial = ['#home', '#blog', '#empty', '#history'].includes(location.hash) ? location.hash.slice(1) : 'home';
+            const initial = ['#home', '#blog', '#empty', '#history', '#settings'].includes(location.hash) ? location.hash.slice(1) : 'home';
             showTab(initial);
 
             /* ===== 历史版本数据懒加载（首次显示时拉取一次） ===== */
@@ -259,7 +339,37 @@
                 loadVersionList('BETA版本.txt', 'betaContent');
                 loadVersionList('RELEASE版本.txt', 'releaseContent');
             }
+
+            /* ===== 致谢名单懒加载（首次显示时拉取一次） ===== */
+            let thanksLoaded = false;
+            async function loadThanks() {
+                if (thanksLoaded) return;
+                thanksLoaded = true;
+                const container = document.getElementById('thanksContent');
+                try {
+                    const response = await fetch('lib/words/thanks/致谢名单.txt');
+                    if (!response.ok) throw new Error('HTTP ' + response.status);
+                    const text = await response.text();
+                    const lines = text.split('\n').filter(line => line.trim() !== '');
+                    if (lines.length === 0) {
+                        container.innerHTML = '<div class="error">暂无致谢名单</div>';
+                        return;
+                    }
+                    let ul = document.createElement('ul');
+                    ul.className = 'version-list';
+                    lines.forEach(function(line) {
+                        let li = document.createElement('li');
+                        li.textContent = line.trim();
+                        ul.appendChild(li);
+                    });
+                    container.innerHTML = '';
+                    container.appendChild(ul);
+                } catch (error) {
+                    container.innerHTML = '<div class="error">加载失败: ' + error.message + '</div>';
+                }
+            }
         })();
     </script>
+    <script src="lib/js/blog.js"></script>
 </body>
 </html>
