@@ -391,6 +391,17 @@ body {
     box-shadow: 0 8px 20px rgba(6, 182, 212, 0.35);
 }
 
+/* ---------- 信息卡片 ---------- */
+.infocard {
+  width: 80%;           /* 示例：section 宽度可随视口变化 */
+  max-width: 500px;
+}
+.infocard img {
+  display: block;       /* 清除图片下方的空隙 */
+  max-width: 100%;      /* 图片最大宽度不超过 section */
+  height: auto;         /* 高度按比例自动调整 */
+}
+
 /* 历史版本面板内卡片使用列居中布局 */
 #tab-history .card {
     display: flex;
