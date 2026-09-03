@@ -48,6 +48,16 @@
 [data-theme="dark"] .blog-header .blog-stat strong {
     color: var(--cyan-300);
 }
+/* 标题左下角时间显示 */
+.blog-header .blog-time {
+    position: absolute;
+    left: 1.2rem;
+    bottom: 0.8rem;
+    color: var(--footer-color);
+    font-size: 0.78rem;
+    line-height: 1.4;
+    font-variant-numeric: tabular-nums;
+}
 
 /* ---------- ② 文章浏览区 ---------- */
 .blog-browse {
@@ -73,17 +83,57 @@
     padding: 2rem 0;
     font-size: 1rem;
 }
-/* 博客加载中提示 */
-.blog-loading {
+/* 博客加载进度条（Win11 风格） */
+.blog-progress-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 1.6rem 1rem;
+    width: 90%;
+    margin: 0 auto;
+}
+.blog-progress {
+    position: relative;
+    width: 100%;
+    max-width: 420px;
+    height: 6px;
+    border-radius: 999px;
+    background: var(--bg-glass);
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+}
+.blog-progress-bar {
+    width: 0%;
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--cyan-500), var(--cyan-300));
+    box-shadow: 0 0 6px rgba(6, 182, 212, 0.45);
+    transition: width 0.3s ease;
+}
+/* 不确定态（list.txt 未返回）：流动高光动画 */
+.blog-progress-wrap.indeterminate .blog-progress-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 35%;
+    animation: blogProgressSlide 1.2s ease-in-out infinite;
+    transition: none;
+}
+@keyframes blogProgressSlide {
+    0% { transform: translateX(-110%); }
+    100% { transform: translateX(330%); }
+}
+.blog-loading-text {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    text-align: center;
+}
+.blog-loading-text-only {
     color: var(--text-secondary);
     padding: 2rem 0;
     font-size: 1rem;
     text-align: center;
-    animation: blogLoadingPulse 1.2s ease-in-out infinite;
-}
-@keyframes blogLoadingPulse {
-    0%, 100% { opacity: 0.45; }
-    50% { opacity: 1; }
 }
 
 /* 文章小卡片：横向长度为正常卡片的 90% */

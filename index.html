@@ -69,9 +69,8 @@
                     <section class="card">
                         <h2>关于其他页面</h2>
                         <div class="link-group">
-                            <a href="newlook/index.html">新主页(测试中)</a>
-                            <a href="oldlook/index.html">旧主页</a>
-                            <a href="testground/index.html" target="_blank">测试区</a>
+                            <a href="othersite/oldlook/index.html">旧主页</a>
+                            <a href="othersite/testground/index.html" target="_blank">测试区</a>
                         </div>
                     </section>
                 </section>
@@ -82,6 +81,7 @@
                     <header class="blog-header">
                         <h1>我的博客</h1>
                         <span class="blog-stat" id="blogStat">本站已有 <strong>0</strong> 篇文章</span>
+                        <span class="blog-time" id="blogTime"></span>
                     </header>
 
                     <div class="blog-layout">
@@ -89,9 +89,14 @@
                         <div class="blog-browse" id="blogBrowse">
                             <!-- 列表态 -->
                             <div id="blogListView">
-                                <div id="blogCardList" class="blog-list">
-                                    <div class="blog-loading" id="blogLoading">正在加载...</div>
+                                <!-- 加载进度条（Win11 风格；加载完成自动隐藏） -->
+                                <div class="blog-progress-wrap" id="blogProgressWrap">
+                                    <div class="blog-progress">
+                                        <div class="blog-progress-bar" id="blogProgressBar"></div>
+                                    </div>
+                                    <span class="blog-loading-text" id="blogLoadingText">正在加载文章…</span>
                                 </div>
+                                <div id="blogCardList" class="blog-list"></div>
                             </div>
                             <!-- 阅读态 -->
                             <div class="blog-read-view" id="blogReadView">
@@ -182,17 +187,39 @@
             let historyLoaded = false;
             let thanksLoaded = false;
 
-            /* ===== 侧边栏收起 / 展开 ===== */
+            /* ===== 侧边栏收起 / 展开（含记忆功能） ===== */
             const layout = document.getElementById('layout');
             const sidebarToggle = document.getElementById('sidebarToggle');
+            const SB_KEY = 'sidebarCollapsed';
+            // 是否处于桌面侧边栏模式（手机端为顶栏，不应用收起记忆）
+            function isDesktopSidebar() {
+                return !window.matchMedia || !window.matchMedia('(max-width: 640px)').matches;
+            }
+            function applySidebarState(collapsed) {
+                layout.classList.toggle('collapsed', !!collapsed);
+                if (sidebarToggle) {
+                    sidebarToggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+                    sidebarToggle.title = collapsed ? '展开侧边栏' : '收起侧边栏';
+                }
+            }
             function toggleSidebar() {
-                const collapsed = layout.classList.toggle('collapsed');
-                sidebarToggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
-                sidebarToggle.title = collapsed ? '展开侧边栏' : '收起侧边栏';
+                const next = !layout.classList.contains('collapsed');
+                applySidebarState(next);
+                try {
+                    if (next) localStorage.setItem(SB_KEY, '1');
+                    else localStorage.removeItem(SB_KEY);
+                } catch (e) { /* localStorage 不可用时忽略 */ }
             }
             if (sidebarToggle) {
                 sidebarToggle.addEventListener('click', toggleSidebar);
             }
+            // 初始化：桌面端恢复记忆的收起状态
+            (function initSidebarState() {
+                if (!isDesktopSidebar()) return;
+                let stored = false;
+                try { stored = localStorage.getItem(SB_KEY) === '1'; } catch (e) { /* ignore */ }
+                if (stored) applySidebarState(true);
+            })();
 
             /* ===== 主题切换 ===== */
             const toggleBtn = document.getElementById('themeToggle');
@@ -285,7 +312,9 @@
                     p.classList.toggle('active', isActive);
                 });
                 if (!active) name = 'home';
-                if (history.replaceState) {
+                // 仅当当前 hash 不是文章级直达（#blog/post/<id>）时才覆写，避免破坏直达链接
+                const isPostHash = /^#blog\/post\//.test(location.hash || '');
+                if (history.replaceState && !isPostHash) {
                     history.replaceState(null, '', '#' + name);
                 }
                 if (name === 'blog' && window.BlogModule) {
@@ -294,6 +323,8 @@
                 if (name === 'history') loadHistory();
                 if (name === 'settings') loadThanks();
             }
+            // 暴露给 blog.js 用于激活标签（避免重复绑定）
+            window.AppShowTab = showTab;
 
             tabs.forEach(function(t) {
                 t.addEventListener('click', function() {
@@ -301,9 +332,15 @@
                 });
             });
 
-            // 初始：根据 hash 或默认主页
-            const initial = ['#home', '#blog', '#empty', '#history', '#settings'].includes(location.hash) ? location.hash.slice(1) : 'home';
-            showTab(initial);
+            // 初始：解析 hash（含文章级直达 #blog/post/<id>）或默认主页
+            let initialTag = 'home';
+            const h = location.hash || '';
+            if (/^#blog\/post\//.test(h)) {
+                initialTag = 'blog'; // 文章级直达：先激活博客面板，文章打开由 blog.js 处理
+            } else if (['#home', '#blog', '#empty', '#history', '#settings'].indexOf(h) !== -1) {
+                initialTag = h.slice(1);
+            }
+            showTab(initialTag);
 
             /* ===== 历史版本数据懒加载（首次显示时拉取一次） ===== */
             async function loadVersionList(fileName, containerId) {
@@ -368,6 +405,24 @@
                 } catch (error) {
                     container.innerHTML = '<div class="error">加载失败: ' + error.message + '</div>';
                 }
+            }
+
+            /* ===== 博客标题左下角实时时钟 ===== */
+            const blogTimeEl = document.getElementById('blogTime');
+            if (blogTimeEl) {
+                function pad2(n) { return (n < 10 ? '0' : '') + n; }
+                function updateBlogTime() {
+                    const now = new Date();
+                    blogTimeEl.textContent =
+                        now.getFullYear() + '年' +
+                        (now.getMonth() + 1) + '月' +
+                        now.getDate() + '日 ' +
+                        pad2(now.getHours()) + ':' +
+                        pad2(now.getMinutes()) + ':' +
+                        pad2(now.getSeconds());
+                }
+                updateBlogTime();
+                setInterval(updateBlogTime, 1000);
             }
         })();
     </script>
