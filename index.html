@@ -312,9 +312,10 @@
                     p.classList.toggle('active', isActive);
                 });
                 if (!active) name = 'home';
-                // 仅当当前 hash 不是文章级直达（#blog/post/<id>）时才覆写，避免破坏直达链接
+                // 目标仍为 blog 且当前是文章级直达（#blog/post/<id>）时保留直达链接；
+                // 切换到其他标签则正常更新 hash（修复：阅读视图切走后再刷新应停留在新标签）
                 const isPostHash = /^#blog\/post\//.test(location.hash || '');
-                if (history.replaceState && !isPostHash) {
+                if (history.replaceState && !(name === 'blog' && isPostHash)) {
                     history.replaceState(null, '', '#' + name);
                 }
                 if (name === 'blog' && window.BlogModule) {
@@ -342,68 +343,102 @@
             }
             showTab(initialTag);
 
-            /* ===== 历史版本数据懒加载（首次显示时拉取一次） ===== */
-            async function loadVersionList(fileName, containerId) {
+            /* ===== 历史版本数据懒加载（缓存 + 静默更新） ===== */
+            // 通用：先渲染缓存内容（若有），再网络拉取更新缓存与界面
+            function renderLinesTo(container, lines, emptyText, errText) {
+                if (!container) return;
+                if (!lines || lines.length === 0) {
+                    container.innerHTML = '<div class="error">' + (emptyText || '暂无记录') + '</div>';
+                    return;
+                }
+                let ul = document.createElement('ul');
+                ul.className = 'version-list';
+                lines.forEach(function(line) {
+                    let li = document.createElement('li');
+                    li.textContent = line.trim();
+                    ul.appendChild(li);
+                });
+                container.innerHTML = '';
+                container.appendChild(ul);
+            }
+            function readListCache(key) {
+                try {
+                    const raw = localStorage.getItem(key);
+                    if (!raw) return null;
+                    const d = JSON.parse(raw);
+                    return (Array.isArray(d) && d.length) ? d : null;
+                } catch (e) { return null; }
+            }
+            function writeListCache(key, lines) {
+                try { localStorage.setItem(key, JSON.stringify(lines)); } catch (e) { /* ignore */ }
+            }
+            // 历史版本：对每个文件，先渲染缓存，再 fetch 更新
+            function loadVersionList(fileName, containerId, cacheKey) {
                 const container = document.getElementById(containerId);
-                // 相对于根目录 index.html 的路径
                 const baseUrl = 'lib/words/historylist/';
                 const encodedFile = encodeURIComponent(fileName);
                 const url = baseUrl + encodedFile;
-                try {
-                    const response = await fetch(url);
-                    if (!response.ok) throw new Error('HTTP ' + response.status);
-                    const text = await response.text();
-                    const lines = text.split('\n').filter(line => line.trim() !== '');
-                    if (lines.length === 0) {
-                        container.innerHTML = '<div class="error">暂无版本记录</div>';
-                        return;
-                    }
-                    let ul = document.createElement('ul');
-                    ul.className = 'version-list';
-                    lines.forEach(function(line) {
-                        let li = document.createElement('li');
-                        li.textContent = line.trim();
-                        ul.appendChild(li);
-                    });
-                    container.innerHTML = '';
-                    container.appendChild(ul);
-                } catch (error) {
-                    container.innerHTML = '<div class="error">加载失败: ' + error.message + '</div>';
+
+                // 1) 缓存先展示
+                const cached = readListCache(cacheKey);
+                if (cached) {
+                    renderLinesTo(container, cached, '暂无版本记录', '加载失败');
+                } else if (container) {
+                    container.innerHTML = '<div class="loading">加载中...</div>';
                 }
+                // 2) 网络拉取更新
+                fetch(url, { cache: 'no-store' })
+                    .then(function(response) {
+                        if (!response.ok) throw new Error('HTTP ' + response.status);
+                        return response.text();
+                    })
+                    .then(function(text) {
+                        const lines = text.split('\n').filter(function(line) { return line.trim() !== ''; });
+                        writeListCache(cacheKey, lines);
+                        renderLinesTo(container, lines, '暂无版本记录', '加载失败');
+                    })
+                    .catch(function(error) {
+                        // 网络失败：有缓存则保留（不覆盖），无缓存则报错
+                        if (!readListCache(cacheKey) && container) {
+                            container.innerHTML = '<div class="error">加载失败: ' + error.message + '</div>';
+                        }
+                    });
             }
 
             function loadHistory() {
                 if (historyLoaded) return;
                 historyLoaded = true;
-                loadVersionList('BETA版本.txt', 'betaContent');
-                loadVersionList('RELEASE版本.txt', 'releaseContent');
+                loadVersionList('BETA版本.txt', 'betaContent', 'longwebHistoryBeta');
+                loadVersionList('RELEASE版本.txt', 'releaseContent', 'longwebHistoryRelease');
             }
 
-            /* ===== 致谢名单懒加载（首次显示时拉取一次） ===== */
+            /* ===== 致谢名单懒加载（缓存 + 静默更新） ===== */
             async function loadThanks() {
                 if (thanksLoaded) return;
                 thanksLoaded = true;
                 const container = document.getElementById('thanksContent');
+                const url = 'lib/words/thanks/致谢名单.txt';
+                const cacheKey = 'longwebThanks';
+
+                // 1) 缓存先展示
+                const cached = readListCache(cacheKey);
+                if (cached) {
+                    renderLinesTo(container, cached, '暂无致谢名单', '加载失败');
+                } else if (container) {
+                    container.innerHTML = '<div class="loading">加载中...</div>';
+                }
+                // 2) 网络拉取更新
                 try {
-                    const response = await fetch('lib/words/thanks/致谢名单.txt');
+                    const response = await fetch(url, { cache: 'no-store' });
                     if (!response.ok) throw new Error('HTTP ' + response.status);
                     const text = await response.text();
-                    const lines = text.split('\n').filter(line => line.trim() !== '');
-                    if (lines.length === 0) {
-                        container.innerHTML = '<div class="error">暂无致谢名单</div>';
-                        return;
-                    }
-                    let ul = document.createElement('ul');
-                    ul.className = 'version-list';
-                    lines.forEach(function(line) {
-                        let li = document.createElement('li');
-                        li.textContent = line.trim();
-                        ul.appendChild(li);
-                    });
-                    container.innerHTML = '';
-                    container.appendChild(ul);
+                    const lines = text.split('\n').filter(function(line) { return line.trim() !== ''; });
+                    writeListCache(cacheKey, lines);
+                    renderLinesTo(container, lines, '暂无致谢名单', '加载失败');
                 } catch (error) {
-                    container.innerHTML = '<div class="error">加载失败: ' + error.message + '</div>';
+                    if (!readListCache(cacheKey) && container) {
+                        container.innerHTML = '<div class="error">加载失败: ' + error.message + '</div>';
+                    }
                 }
             }
 
