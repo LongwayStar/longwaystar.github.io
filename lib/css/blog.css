@@ -83,15 +83,20 @@
     padding: 2rem 0;
     font-size: 1rem;
 }
-/* 博客加载进度条（Win11 风格） */
+/* 博客加载进度条（Win11 风格）；默认隐藏，仅在加载时由 JS 显示 */
 .blog-progress-wrap {
-    display: flex;
+    display: none;
     flex-direction: column;
     align-items: center;
     gap: 0.6rem;
     padding: 1.6rem 1rem;
     width: 90%;
     margin: 0 auto;
+}
+/* 阅读视图内的直达加载占位：进度条应可见 */
+.blog-read-view .blog-progress-wrap,
+#blogReadContent .blog-progress-wrap {
+    display: flex;
 }
 .blog-progress {
     position: relative;
