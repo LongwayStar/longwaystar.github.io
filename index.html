@@ -4,11 +4,11 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="LongwayStar的个人网站" />
-    <meta name="author" content="LongwayStar的个人主页" />
+    <meta name="author" content="LongwayStar" />
     <link rel="icon" href="lib/icons/new_title.ico" />
     <link rel="stylesheet" href="lib/css/generalstyle.css" />
     <link rel="stylesheet" href="lib/css/blog.css" />
-    <title>LongWeb</title>
+    <title>LongwaySite</title>
 </head>
 <body>
     <div class="layout" id="layout">
@@ -38,7 +38,7 @@
                 <!-- 主页面板 -->
                 <section id="tab-home" class="tab-panel active" role="tabpanel" aria-labelledby="tabBtn-home">
                     <header class="header">
-                        <h1>欢迎访问 LongWeb!</h1>
+                        <h1>欢迎访问 LongwaySite!</h1>
                         <hr />
                     </header>
                     <section class="card">
@@ -408,8 +408,8 @@
             function loadHistory() {
                 if (historyLoaded) return;
                 historyLoaded = true;
-                loadVersionList('BETA版本.txt', 'betaContent', 'longwebHistoryBeta');
-                loadVersionList('RELEASE版本.txt', 'releaseContent', 'longwebHistoryRelease');
+                loadVersionList('BETA版本.txt', 'betaContent', 'LongwaySiteHistoryBeta');
+                loadVersionList('RELEASE版本.txt', 'releaseContent', 'LongwaySiteHistoryRelease');
             }
 
             /* ===== 致谢名单懒加载（缓存 + 静默更新） ===== */
@@ -418,7 +418,7 @@
                 thanksLoaded = true;
                 const container = document.getElementById('thanksContent');
                 const url = 'lib/words/thanks/致谢名单.txt';
-                const cacheKey = 'longwebThanks';
+                const cacheKey = 'LongwaySiteThanks';
 
                 // 1) 缓存先展示
                 const cached = readListCache(cacheKey);
