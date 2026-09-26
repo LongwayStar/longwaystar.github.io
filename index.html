@@ -435,6 +435,14 @@
                 const resolved = renderTab(name);
                 if (mode === 'push') pushNav('#' + resolved);
                 else if (mode !== 'none') replaceNav('#' + resolved);
+                // 标签切换后必须让博客面板的内部状态与新 URL 对齐：
+                // 若曾在阅读视图点去别的标签，再切回来时 URL 已是 #blog（列表），
+                // 面板不能继续显示上次读的那篇文章（否则视图与 URL 打架、
+                // 「返回」也只能退回上一步）。文章级 URL（#blog/post/<id>）
+                // 由 blog.js 的 handleHash 流程负责，此处不会干预。
+                if (resolved === 'blog' && window.BlogModule && window.BlogModule.syncListIfHashIsList) {
+                    window.BlogModule.syncListIfHashIsList();
+                }
             }
             // 暴露给 blog.js 用于激活标签（避免重复绑定）
             window.AppShowTab = showTab;
