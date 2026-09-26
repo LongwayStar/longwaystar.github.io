@@ -698,6 +698,12 @@ body {
     border: 1px solid transparent;
     line-height: 1.5;
 }
+/* 主题状态说明文字（关于主题卡片） */
+#tab-settings .theme-status {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    margin: 0.2rem 0 0.4rem;
+}
 /* 致谢名单列表：左对齐、行距舒适（无圆点前缀） */
 #tab-settings .version-list {
     display: inline-block;
