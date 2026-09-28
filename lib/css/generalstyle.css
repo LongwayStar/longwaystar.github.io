@@ -25,6 +25,13 @@
     --btn-bg: #06B6D4;
     --btn-text: #fff;
     --footer-color: #4a5a6a;
+    /* ---- 图标资源（随主题自动切换） ----
+       命名约定：文件名里的 light / dark 指**图标自身的颜色**，不是主题名。
+       因此「亮色主题（浅背景）配深色图标，暗色主题（深背景）配浅色图标」。
+       新增图标时在这里和下方的 [data-theme="dark"] 里成对登记即可。 */
+    --icon-nav: url('../icons/lablesbar_dark.png');   /* 侧边栏汉堡图标 */
+    --icon-back: url('../icons/back_dark.png');       /* 阅读视图返回箭头 */
+    --icon-totop: url('../icons/totop_dark.png');     /* 回到顶部 */
 }
 [data-theme="dark"] {
     --bg-body: #121e2a;
@@ -39,6 +46,10 @@
     --btn-bg: #67E8F9;
     --btn-text: #0a1a22;
     --footer-color: #8aa0b0;
+    /* 深色背景 → 换用浅色图标（见 :root 中的命名约定） */
+    --icon-nav: url('../icons/lablesbar_light.png');
+    --icon-back: url('../icons/back_light.png');
+    --icon-totop: url('../icons/totop_light.png');
 }
 * {
     margin: 0;
@@ -87,7 +98,7 @@ body {
     gap: 0.5rem;
     padding: 0 1.1rem;
     background: transparent;
-    background-image: url('../icons/lables_bar.png');
+    background-image: var(--icon-nav);   /* 随主题自动切换，见 :root 的图标变量 */
     background-repeat: no-repeat;
     background-position: left 1rem center;
     background-size: 26px auto;
@@ -136,7 +147,7 @@ body {
     width: 40px;
     height: 40px;
     border-radius: 8px;
-    background-image: url('../icons/lables_bar.png');
+    background-image: var(--icon-nav);   /* 随主题自动切换，见 :root 的图标变量 */
     background-color: var(--bg-card);
     background-position: center;
     background-size: 24px auto;
@@ -698,11 +709,16 @@ body {
     border: 1px solid transparent;
     line-height: 1.5;
 }
-/* 主题状态说明文字（关于主题卡片） */
-#tab-settings .theme-status {
+/* 主题 / 背景卡片的状态说明文字 */
+#tab-settings .theme-status,
+#tab-settings .card-status {
     color: var(--text-secondary);
     font-size: 0.95rem;
     margin: 0.2rem 0 0.4rem;
+}
+/* 状态为空时不占高度，出现时也不跳版（配合 :empty 一起用） */
+#tab-settings .card-status:empty {
+    display: none;
 }
 /* 致谢名单列表：左对齐、行距舒适（无圆点前缀） */
 #tab-settings .version-list {

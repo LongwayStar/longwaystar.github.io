@@ -206,13 +206,25 @@
     flex-shrink: 1;
     min-width: 0;
 }
-/* 标题旁的编辑时间（灰色小字） */
+/* 标题旁的最新编辑时间（灰色小字） */
 .blog-item-date {
     flex-shrink: 0;
     font-size: 0.72rem;
     font-weight: 400;
     color: var(--footer-color);
     white-space: nowrap;
+}
+/* 作者（列表小卡片只显示第一位作者） */
+.blog-item-author {
+    flex-shrink: 0;
+    font-size: 0.72rem;
+    color: var(--footer-color);
+    white-space: nowrap;
+    /* 只在空间真的不够时才省略（原来的 6em 会把 LongwayStar 这类名字截掉），
+       留 45% 的上限防止超长作者名把标题挤没 */
+    max-width: 45%;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 .blog-item-desc {
     flex: 3;
@@ -225,6 +237,10 @@
     overflow: hidden;
     text-overflow: ellipsis;
     margin-top: 0.3rem;
+    /* 为右下角的主题胶囊留出通道：胶囊是绝对定位的，描述文字若铺满整行
+       就会被它压住（两行都会被这条留白挡住，因此不会再重叠） */
+    padding-right: 5rem;
+    box-sizing: border-box;
 }
 /* 右下角主题胶囊 */
 .blog-item-tag {
@@ -233,6 +249,30 @@
     bottom: 0.6rem;
     display: flex;
     justify-content: flex-end;
+    /* 兜底：主题名特别长时省略号收尾，不让它越过留白盖住文字 */
+    max-width: 55%;
+}
+
+/* 作者名可点击（与主题胶囊一样，点了就按该作者筛选） */
+.blog-item-author,
+.blog-read-byline .author-link {
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+.blog-item-author:hover,
+.blog-read-byline .author-link:hover {
+    color: var(--cyan-500);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+}
+[data-theme="dark"] .blog-item-author:hover,
+[data-theme="dark"] .blog-read-byline .author-link:hover {
+    color: var(--cyan-300);
+}
+.blog-read-byline .author-link:focus-visible {
+    outline: 2px solid var(--cyan-500);
+    outline-offset: 2px;
+    border-radius: 4px;
 }
 
 /* 主题胶囊（亮绿色） */
@@ -406,7 +446,13 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: var(--bg-glass);
+    /* 注意：这里必须用 background-color，不能用 background 简写，
+       否则会把下面按主题切换的 background-image 一起重置掉 */
+    background-color: var(--bg-glass);
+    background-image: var(--icon-back);   /* 随主题自动切换，见 generalstyle.css */
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 22px auto;           /* 只锁定宽度，高度按比例，避免拉伸变形 */
     backdrop-filter: blur(var(--bg-blur));
     -webkit-backdrop-filter: blur(var(--bg-blur));
     border: 1px solid var(--border-color);
@@ -418,10 +464,75 @@
     border-color: var(--cyan-500);
     box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3);
 }
-.blog-back img {
-    width: 22px;
-    height: 22px;
-    display: block;
+/* 返回箭头已改为按钮的 background-image（原来的 <img> 已移除），
+   因此不再需要 .blog-back img 规则 */
+
+/* ---------- 阅读视图浮动按钮（右下角竖排：上「返回」/ 下「回到顶部」） ----------
+   显示条件由 blog.js 掌管：仅在阅读视图、且文章标题滚出视口后加 .visible。
+   元素在 <body> 下（不能在 .blog-browse 里，那里的 backdrop-filter 会把
+   position:fixed 的包含块吃掉），所以这里可以安全地相对视口定位。 */
+.read-fab {
+    position: fixed;
+    right: 1.4rem;
+    /* 适配 iPhone 刘海屏/手势条，避免贴到系统手势区域 */
+    bottom: calc(1.4rem + env(safe-area-inset-bottom, 0px));
+    z-index: 45;                 /* 高于内容与页脚，低于侧边栏展开按钮(60) */
+    display: flex;
+    flex-direction: column;      /* 竖排：DOM 顺序 = 上返回、下回到顶部 */
+    gap: 0.7rem;
+    /* 隐藏态：淡出 + 略微下移缩小。visibility 延迟切换，
+       保证淡出动画能播完（否则会瞬间消失） */
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(14px) scale(0.92);
+    pointer-events: none;
+    transition: opacity 0.28s ease, transform 0.28s cubic-bezier(0.2, 0.7, 0.3, 1),
+                visibility 0s linear 0.28s;
+}
+.read-fab.visible {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+    transition: opacity 0.28s ease, transform 0.28s cubic-bezier(0.2, 0.7, 0.3, 1),
+                visibility 0s linear 0s;
+}
+.read-fab-btn {
+    /* 44px 是移动端推荐的舒适点击尺寸 */
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border-radius: 50%;
+    /* 同样注意：用 background-color，别用 background 简写把图标重置掉 */
+    background-color: var(--bg-card);
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 22px auto;
+    border: 1px solid var(--border-color);
+    backdrop-filter: blur(var(--bg-blur));
+    -webkit-backdrop-filter: blur(var(--bg-blur));
+    box-shadow: var(--shadow);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+#fabBack { background-image: var(--icon-back); }    /* 与阅读页右上角的返回图标同源 */
+#fabTop  { background-image: var(--icon-totop); }
+/* 只在真正支持“悬停”的设备上应用悬停反馈：
+   触屏上 :hover 会粘住不放，还会盖掉 :active 的按下反馈 */
+@media (hover: hover) {
+    .read-fab-btn:hover {
+        border-color: var(--cyan-500);
+        box-shadow: 0 6px 16px rgba(6, 182, 212, 0.3);
+        transform: translateY(-2px);
+    }
+}
+.read-fab-btn:active {
+    transform: scale(0.93);
+}
+.read-fab-btn:focus-visible {
+    outline: 2px solid var(--cyan-500);
+    outline-offset: 2px;
 }
 .blog-read-title {
     font-size: 1.6rem;
@@ -441,6 +552,126 @@
 .blog-read-date {
     color: var(--footer-color);
     font-size: 0.85rem;
+}
+/* 作者 + 修改时间：与撰写时间同一行，但整组推到最右侧 */
+.blog-read-byline {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 0.85rem;
+    color: var(--footer-color);
+}
+.blog-read-author {
+    white-space: nowrap;
+}
+.blog-read-edited {
+    white-space: nowrap;
+}
+/* 「标签：值」的小标签（撰写时间：/ 作者：/ 修改时间：） */
+.blog-read-meta .meta-label {
+    color: var(--footer-color);
+    opacity: 0.85;
+}
+.blog-read-meta .meta-value {
+    color: var(--text-secondary);
+}
+.blog-read-byline .meta-value {
+    color: var(--text-secondary);
+}
+/* 有编辑记录时给点可悬停的暗示 */
+.blog-read-edited.has-history {
+    cursor: help;
+    text-decoration: underline dotted;
+    text-underline-offset: 0.25em;
+}
+.blog-read-edited.has-history:focus-visible {
+    outline: 2px solid var(--cyan-500);
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
+/* ---------- 「最近编辑记录」浮动提示框 ---------- */
+.edit-tip-wrap {
+    position: relative;
+    display: inline-block;
+}
+.edit-tip {
+    position: absolute;
+    top: calc(100% + 0.55rem);
+    right: 0;
+    z-index: 30;
+    min-width: 9rem;
+    padding: 0.55rem 0.8rem 0.6rem;
+    background: var(--bg-card);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    font-size: 0.82rem;
+    line-height: 1.65;
+    text-align: left;
+    white-space: nowrap;
+    pointer-events: none;
+    /* 呼应站内浮动按钮的显隐动画 */
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-6px) scale(0.97);
+    transform-origin: top right;
+    transition: opacity 0.2s ease, transform 0.2s cubic-bezier(0.2, 0.7, 0.3, 1),
+                visibility 0s linear 0.2s;
+}
+.edit-tip-wrap.open .edit-tip {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0) scale(1);
+    transition: opacity 0.2s ease, transform 0.2s cubic-bezier(0.2, 0.7, 0.3, 1),
+                visibility 0s linear 0s;
+}
+/* 指向触发元素的小尖角 */
+.edit-tip::before {
+    content: '';
+    position: absolute;
+    top: -5px;
+    right: 1.1rem;
+    width: 8px;
+    height: 8px;
+    background: var(--bg-card);
+    border-left: 1px solid var(--border-color);
+    border-top: 1px solid var(--border-color);
+    transform: rotate(45deg);
+}
+.edit-tip-title {
+    display: block;
+    font-size: 0.72rem;
+    color: var(--footer-color);
+    margin-bottom: 0.1rem;
+}
+.edit-tip-list {
+    display: block;
+}
+.edit-tip-item {
+    display: block;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+}
+/* 窄屏时右侧那组单独换行并靠左，避免挤成一团 */
+@media (max-width: 600px) {
+    .blog-read-byline {
+        margin-left: 0;
+        width: 100%;
+    }
+    .edit-tip {
+        /* 换行后触发元素靠左，提示框改成左对齐以免跑出屏幕 */
+        right: auto;
+        left: 0;
+        transform-origin: top left;
+    }
+    .edit-tip::before {
+        left: 1.1rem;
+        right: auto;
+    }
 }
 .blog-read-content {
     color: var(--text-primary);
@@ -499,6 +730,79 @@
 }
 [data-theme="dark"] .blog-read-content a {
     color: var(--cyan-300);
+}
+
+/* ---------- 折叠文字（<details>/<summary>，正文里直接写原始 HTML） ---------- */
+.blog-read-content details {
+    margin: 1em 0;
+    padding: 0.5em 1em 0.2em;
+    background: var(--bg-glass);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+}
+.blog-read-content details > summary {
+    cursor: pointer;
+    padding: 0.35em 0;
+    font-weight: 600;
+    color: var(--text-primary);
+    list-style: none;            /* 去掉默认三角，自绘一个可旋转的箭头 */
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+    user-select: none;
+}
+.blog-read-content details > summary::-webkit-details-marker {
+    display: none;               /* Safari 也需要显式关掉 */
+}
+.blog-read-content details > summary::before {
+    content: '';
+    width: 0.42em;
+    height: 0.42em;
+    border-right: 2px solid var(--cyan-500);
+    border-bottom: 2px solid var(--cyan-500);
+    transform: rotate(-45deg);   /* 收起：指向右 */
+    transition: transform 0.2s ease;
+    flex-shrink: 0;
+    margin-left: 0.15em;
+}
+.blog-read-content details[open] > summary::before {
+    transform: rotate(45deg);    /* 展开：指向下 */
+}
+.blog-read-content details[open] > summary {
+    margin-bottom: 0.4em;
+    border-bottom: 1px solid var(--border-color);
+}
+/* 折叠块内部首尾段落不要多出上下边距 */
+.blog-read-content details > p:first-of-type {
+    margin-top: 0.3em;
+}
+.blog-read-content details > p:last-child {
+    margin-bottom: 0.6em;
+}
+
+/* ---------- 选项框（GFM 任务列表：- [ ] / - [x]） ---------- */
+.blog-read-content li.md-task {
+    list-style: none;            /* 有方框了，不再要圆点 */
+    display: flex;
+    align-items: flex-start;
+    gap: 0.55em;
+}
+.blog-read-content li.md-task > input[type="checkbox"] {
+    /* 只作展示：disabled 保证不可交互、也不进键盘焦点序列 */
+    flex-shrink: 0;
+    margin: 0.42em 0 0;
+    width: 1em;
+    height: 1em;
+    accent-color: var(--cyan-500);
+    cursor: default;
+    pointer-events: none;
+}
+.blog-read-content li.md-task > .md-task-text {
+    min-width: 0;
+}
+.blog-read-content li.md-task.is-checked > .md-task-text {
+    color: var(--footer-color);
+    text-decoration: line-through;
 }
 
 /* ---------- Markdown 表格（GFM 风格） ---------- */
@@ -564,5 +868,32 @@
     }
     .blog-item-desc {
         font-size: 0.8rem;
+    }
+}
+
+/* ---------- 浮动按钮的移动端适配 ---------- */
+@media (max-width: 640px) {
+    .read-fab {
+        right: 0.85rem;
+        bottom: calc(0.85rem + env(safe-area-inset-bottom, 0px));
+        gap: 0.6rem;
+    }
+    .read-fab-btn {
+        width: 42px;
+        height: 42px;
+        background-size: 20px auto;
+    }
+}
+/* 横屏手机：垂直空间紧张，按钮再小一点、间距收紧 */
+@media (max-height: 480px) and (orientation: landscape) {
+    .read-fab {
+        right: 0.6rem;
+        bottom: calc(0.6rem + env(safe-area-inset-bottom, 0px));
+        gap: 0.45rem;
+    }
+    .read-fab-btn {
+        width: 38px;
+        height: 38px;
+        background-size: 18px auto;
     }
 }

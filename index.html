@@ -67,7 +67,7 @@
             }
         })();
     </script>
-    <link rel="icon" href="lib/icons/new_title.ico" />
+    <link rel="icon" href="lib/icons/title.ico" />
     <link rel="stylesheet" href="lib/css/generalstyle.css" />
     <link rel="stylesheet" href="lib/css/blog.css" />
     <title>LongwaySite</title>
@@ -162,9 +162,7 @@
                             </div>
                             <!-- 阅读态 -->
                             <div class="blog-read-view" id="blogReadView">
-                                <button class="blog-back" id="blogBack" title="返回列表" aria-label="返回列表">
-                                    <img src="lib/icons/back.ico" alt="返回" />
-                                </button>
+                                <button class="blog-back" id="blogBack" title="返回列表" aria-label="返回列表"></button>
                                 <h2 class="blog-read-title" id="blogReadTitle"></h2>
                                 <div class="blog-read-meta" id="blogReadMeta"></div>
                                 <div class="blog-read-content" id="blogReadContent"></div>
@@ -176,6 +174,8 @@
                             <h3>筛选与排序</h3>
                             <label class="blog-filter-label" for="blogSearchName">按名称搜索</label>
                             <input type="search" id="blogSearchName" placeholder="输入文章名称..." aria-label="按名称搜索文章" />
+                            <label class="blog-filter-label" for="blogSearchAuthor">按作者搜索</label>
+                            <input type="search" id="blogSearchAuthor" placeholder="输入作者名..." aria-label="按作者搜索文章" />
                             <label class="blog-filter-label" for="blogSearchTheme">按主题筛选</label>
                             <input type="text" id="blogSearchTheme" placeholder="输入主题，如：技术" aria-label="按主题筛选文章" />
                             <div class="blog-sort-group">
@@ -185,7 +185,7 @@
                                 </div>
                                 <div class="blog-sort-row">
                                     <button class="blog-sort-btn" id="blogSortDir">升序 ↑</button>
-                                    <button class="blog-sort-btn" id="blogSortReset">取消</button>
+                                    <button class="blog-sort-btn" id="blogSortReset">重置</button>
                                 </div>
                             </div>
                         </aside>
@@ -230,8 +230,10 @@
                     </section>
                     <section class="card">
                         <h2>关于背景</h2>
+                        <p class="card-status" id="bgStatus"></p>
                         <div class="bg-actions">
                             <button class="link-btn" id="settingsRefreshBg" type="button">刷新背景</button>
+                            <button class="link-btn" id="settingsSaveBg" type="button">获取当前壁纸</button>
                         </div>
                     </section>
                     <section class="card">
@@ -243,10 +245,19 @@
         </main>
     </div>
 
+    <!-- 阅读视图浮动按钮：右下角竖排（上「返回」/ 下「回到顶部」）。
+         必须挂在 <body> 下：阅读区所在的 .blog-browse 带 backdrop-filter，
+         会让 position:fixed 的包含块变成它，从而不再跟随视口固定。
+         显示条件与动画由 blog.js + blog.css 控制（仅阅读视图、且标题滚出视口后才出现） -->
+    <div class="read-fab" id="readFab" aria-hidden="true">
+        <button class="read-fab-btn" id="fabBack" type="button" title="返回列表" aria-label="返回列表"></button>
+        <button class="read-fab-btn" id="fabTop" type="button" title="回到顶部" aria-label="回到顶部"></button>
+    </div>
+
     <footer class="footer">
         <div class="footer-content">
             <p>Powered by GithubPages</p>
-            <p>Coded by Deepseek&LongwayStar</p>
+            <p>Coded by DeepSeek&LongwayStar</p>
             <p>Created by LongwayStar in 2026</p>
         </div>
     </footer>
@@ -369,37 +380,196 @@
             })();
             updateThemeUI();
 
-            /* ===== 刷新 / 下载背景 ===== */
+            /* ===== 刷新壁纸 / 获取当前壁纸 =====
+               t.alcy.cc/ycy 是"随机壁纸"入口：**每次请求都会跳到另一张图**。
+               所以绝不能拿它本身当壁纸地址——那样每次渲染背景、每次下载都会
+               变成另一张图（这正是上一版"获取当前壁纸"对不上的根因：
+               img.currentSrc 拿到的其实是原始 URL，而不是重定向后的地址）。
+               正确做法：先跟随重定向解析出**真实固定链接**，再用真实链接设背景。 */
+            const WALLPAPER_API = 'https://t.alcy.cc/ycy';
             const body = document.body;
-            let currentBgUrl = '';    // 当前背景的最终稳定 URL（经重定向后的真实图片地址）
+            // 当前壁纸状态：url = 写在 body 上的地址；resolved = 该地址是否就是屏幕上那张图；
+            // blob = 直接取下来的图片数据（有它就不必再下载一次）
+            let currentBg = { url: '', resolved: false, blob: null, blobUrl: '' };
 
-            function backgroundUrl() {
-                return 'https://t.alcy.cc/ycy?t=' + Date.now();
+            function randomWallpaperUrl() {
+                return WALLPAPER_API + '?t=' + Date.now();
             }
-            // 刷新背景：img 加载（跨域无需 CORS），加载后读取 currentSrc 得到最终稳定 URL
-            function refreshBackground() {
-                const newUrl = backgroundUrl();
-                const img = new Image();
-                img.onload = function() {
-                    // currentSrc 为重定向后的真实图片地址（稳定静态文件，与屏幕显示一致）
-                    currentBgUrl = img.currentSrc || newUrl;
-                    body.style.backgroundImage = 'url("' + currentBgUrl + '")';
-                };
-                img.onerror = function() {
-                    // 加载失败也设置背景（可能服务暂时无响应，但至少更新 URL）
-                    body.style.backgroundImage = 'url("' + newUrl + '")';
-                };
-                img.src = newUrl;
+            // 预加载（跨域无需 CORS）：让切换背景时不会先白一下
+            function preloadImage(url) {
+                return new Promise(function(resolve) {
+                    const img = new Image();
+                    img.onload = function() { resolve(img.currentSrc || url); };
+                    img.onerror = function() { resolve(url); };
+                    img.src = url;
+                });
             }
-            // 下载背景功能已移除（跨域限制下无法可靠下载当前背景）
+            // 跟随重定向拿"真实固定链接"。只有确实发生了跳转（final ≠ 请求地址）
+            // 才返回它；没跳转说明该地址本身就是随机入口，不可用作壁纸地址。
+            // 先用 HEAD（不下载图片本体），不被支持时再用 GET 并在拿到地址后立刻中断
+            async function resolveWallpaperRedirect(reqUrl) {
+                try {
+                    const head = await fetch(reqUrl, { method: 'HEAD', redirect: 'follow', cache: 'no-store' });
+                    if (head.ok && head.url && head.url !== reqUrl) return head.url;
+                } catch (e) { /* HEAD 不被支持 → 试 GET */ }
+                try {
+                    const ctl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+                    const res = await fetch(reqUrl, {
+                        redirect: 'follow', cache: 'no-store',
+                        signal: ctl ? ctl.signal : undefined
+                    });
+                    const finalUrl = res.url || '';
+                    const ok = res.ok;
+                    if (ctl) ctl.abort();   // 拿到地址就够了，别把整张图下下来
+                    if (ok && finalUrl && finalUrl !== reqUrl) return finalUrl;
+                } catch (e) { /* 解析失败 */ }
+                return null;
+            }
+
+            // 刷新壁纸：① 解析真实链接 → ② 解析不到就取成 blob（也是稳定的同一张）
+            // → ③ 都失败才退回"直接用随机入口"（地址不稳定，无法精确获取）
+            async function refreshBackground() {
+                if (currentBg.blobUrl) {
+                    try { URL.revokeObjectURL(currentBg.blobUrl); } catch (e) { /* 忽略 */ }
+                }
+                currentBg = { url: '', resolved: false, blob: null, blobUrl: '' };
+
+                const reqUrl = randomWallpaperUrl();
+                const realUrl = await resolveWallpaperRedirect(reqUrl);
+                if (realUrl) {
+                    await preloadImage(realUrl);      // 预热，切换时更顺
+                    currentBg.url = realUrl;
+                    currentBg.resolved = true;
+                } else {
+                    try {
+                        const res = await fetch(reqUrl, { cache: 'no-store' });
+                        if (!res.ok) throw new Error('HTTP ' + res.status);
+                        const blob = await res.blob();
+                        const objUrl = URL.createObjectURL(blob);
+                        currentBg = { url: objUrl, resolved: true, blob: blob, blobUrl: objUrl };
+                    } catch (e) {
+                        // 图床没开放跨域：只能退回旧办法，背景能显示但不是稳定地址
+                        currentBg.url = await preloadImage(reqUrl);
+                        currentBg.resolved = false;
+                    }
+                }
+                body.style.backgroundImage = 'url("' + currentBg.url + '")';
+                return currentBg.url;
+            }
+
+            // 背景卡片上的状态提示
+            const bgStatusEl = document.getElementById('bgStatus');
+            function setBgStatus(text) {
+                if (bgStatusEl) bgStatusEl.textContent = text || '';
+            }
+            function pad2(n) { return (n < 10 ? '0' : '') + n; }
+
+            /* 把图片数据转成**真正的 PNG**（canvas 重编码）。
+               为什么要真转换：JPEG 的字节不会因为改了后缀就变成 PNG，
+               直接改名只会得到一个"名不副实"的文件。
+               已经是 PNG 的直接复用；图太大 / 浏览器不支持 canvas 时返回 null，
+               由调用方回退到原格式（宁可保持原样，也不给损坏的文件） */
+            async function blobToPng(blob) {
+                if (!blob) return null;
+                if (blob.type === 'image/png') return blob;   // 本来就是 PNG，无需重编码
+                const objUrl = URL.createObjectURL(blob);
+                try {
+                    const img = await new Promise(function(resolve, reject) {
+                        const im = new Image();
+                        im.onload = function() { resolve(im); };
+                        im.onerror = function() { reject(new Error('图片解码失败')); };
+                        im.src = objUrl;
+                    });
+                    const w = img.naturalWidth || img.width;
+                    const h = img.naturalHeight || img.height;
+                    if (!w || !h) return null;
+                    const cv = document.createElement('canvas');
+                    cv.width = w;
+                    cv.height = h;
+                    const ctx = cv.getContext ? cv.getContext('2d') : null;
+                    if (!ctx) return null;
+                    ctx.drawImage(img, 0, 0);
+                    if (!cv.toBlob) return null;
+                    const png = await new Promise(function(resolve) {
+                        cv.toBlob(function(b) { resolve(b); }, 'image/png');
+                    });
+                    return png && png.type === 'image/png' ? png : null;
+                } catch (e) {
+                    return null;   // 超大图 / canvas 不可用 → 交给调用方回退
+                } finally {
+                    URL.revokeObjectURL(objUrl);
+                }
+            }
+
+            /* 获取当前壁纸：把屏幕上正在显示的那张图存下来。
+               resolved 为真时，currentBg.url 就是屏幕上那张图的固定地址，
+               下载结果必然一致；否则（拿不到真实地址）宁可明确告知，也不给一张错图。
+               保存格式统一为 PNG（转换失败则按原格式保存并说明） */
+            async function saveCurrentWallpaper() {
+                if (!currentBg.url) {
+                    setBgStatus('正在获取壁纸…');
+                    await refreshBackground();
+                }
+                if (!currentBg.resolved) {
+                    setBgStatus('拿不到与屏幕一致的原图（图床未开放跨域读取），请先点「刷新背景」重试');
+                    return;
+                }
+                const now = new Date();
+                const stamp = now.getFullYear() + '-' + pad2(now.getMonth() + 1) + '-' +
+                    pad2(now.getDate()) + '-' + pad2(now.getHours()) + pad2(now.getMinutes()) + pad2(now.getSeconds());
+                try {
+                    // 已经取过 blob 就直接用，省一次请求；否则按真实固定链接取
+                    let blob = currentBg.blob;
+                    if (!blob) {
+                        const res = await fetch(currentBg.url, { mode: 'cors', cache: 'no-store' });
+                        if (!res.ok) throw new Error('HTTP ' + res.status);
+                        blob = await res.blob();
+                    }
+                    // 统一转成真正的 PNG；转不了就保留原格式
+                    const pngBlob = await blobToPng(blob);
+                    let outBlob = pngBlob;
+                    let ext = 'png';
+                    let note = '';
+                    if (!outBlob) {
+                        outBlob = blob;
+                        const m = String(currentBg.url).split('?')[0].match(/\.(jpe?g|png|webp|gif|avif|bmp)$/i);
+                        ext = (blob.type && /^image\//.test(blob.type))
+                            ? blob.type.replace('image/', '').replace('jpeg', 'jpg')
+                            : (m ? m[1].toLowerCase() : 'jpg');
+                        note = '（转 PNG 失败，已按原格式 ' + ext + ' 保存）';
+                    }
+                    const fileName = 'wallpaper-' + stamp + '.' + ext;
+                    const objUrl = URL.createObjectURL(outBlob);
+                    const a = document.createElement('a');
+                    a.href = objUrl;
+                    a.download = fileName;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    setTimeout(function() { URL.revokeObjectURL(objUrl); }, 10000);
+                    setBgStatus('已开始下载：' + fileName + note);
+                } catch (err) {
+                    // 图床不给 CORS 头 → 退化为新标签页打开固定链接，用户可右键另存
+                    const opened = window.open(currentBg.url, '_blank', 'noopener');
+                    setBgStatus(opened
+                        ? '该图片不允许直接下载，已在新标签页打开 —— 右键「图片另存为」即可保存'
+                        : '该图片不允许直接下载，且新标签页被浏览器拦截，请允许弹出窗口后重试');
+                }
+            }
+
             const refreshBgBtn = document.getElementById('refreshBg');
-            refreshBgBtn.addEventListener('click', refreshBackground);
+            refreshBgBtn.addEventListener('click', function() { refreshBackground(); });
             const settingsRefreshBtn = document.getElementById('settingsRefreshBg');
-            if (settingsRefreshBtn) settingsRefreshBtn.addEventListener('click', refreshBackground);
+            if (settingsRefreshBtn) settingsRefreshBtn.addEventListener('click', function() {
+                setBgStatus('');
+                refreshBackground();
+            });
+            const saveBgBtn = document.getElementById('settingsSaveBg');
+            if (saveBgBtn) saveBgBtn.addEventListener('click', saveCurrentWallpaper);
 
-            // 页面加载后：若从未刷新过，主动刷新一次以记录当前背景的稳定 URL
+            // 页面加载后：主动解析一次壁纸（把随机入口换成真实固定链接）
             (function initBackground() {
-                if (!currentBgUrl) refreshBackground();
+                if (!currentBg.url) refreshBackground();
             })();
 
             /* ===== 侧边栏标签切换（hash 驱动，含浏览器历史） ===== */
@@ -440,8 +610,8 @@
                 // 面板不能继续显示上次读的那篇文章（否则视图与 URL 打架、
                 // 「返回」也只能退回上一步）。文章级 URL（#blog/post/<id>）
                 // 由 blog.js 的 handleHash 流程负责，此处不会干预。
-                if (resolved === 'blog' && window.BlogModule && window.BlogModule.syncListIfHashIsList) {
-                    window.BlogModule.syncListIfHashIsList();
+                if (window.BlogModule && window.BlogModule.onTabShown) {
+                    window.BlogModule.onTabShown(resolved);
                 }
             }
             // 暴露给 blog.js 用于激活标签（避免重复绑定）
