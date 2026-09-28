@@ -1,4 +1,4 @@
-# LongwaySite AI项目结构分析（供后续改动参考）
+# LongwaySite项目结构分析
 
 | 项 | 值 |
 |---|---|
