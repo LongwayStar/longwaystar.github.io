@@ -73,6 +73,16 @@
     <title>LongwaySite</title>
 </head>
 <body>
+    <!-- 壁纸图层：用 <img> 而不是 CSS 背景，这样"图片另存为"才能拿到屏幕上这张原图。
+        默认 src 让它随页面解析立刻开始加载，避免首屏空一块 -->
+    <img class="bg-layer" id="bgLayer" src="https://t.alcy.cc/ycy" alt="" aria-hidden="true" />
+
+    <!-- 「保存模式」提示条（图床不给 CORS、无法脚本下载时显示） -->
+    <div class="bg-save-hint" id="bgSaveHint" hidden>
+        <span>该图床不允许网页直接读取图片数据 —— 请在图片上<strong>右键 →「图片另存为」</strong>（手机：长按图片 →「存储图像」）</span>
+        <button type="button" id="bgSaveHintClose">完成</button>
+    </div>
+
     <div class="layout" id="layout">
         <button class="sidebar-toggle" id="sidebarToggle" aria-label="收起或展开侧边栏" title="收起/展开"></button>
         <!-- 左侧边栏 -->
@@ -250,8 +260,23 @@
          会让 position:fixed 的包含块变成它，从而不再跟随视口固定。
          显示条件与动画由 blog.js + blog.css 控制（仅阅读视图、且标题滚出视口后才出现） -->
     <div class="read-fab" id="readFab" aria-hidden="true">
-        <button class="read-fab-btn" id="fabBack" type="button" title="返回列表" aria-label="返回列表"></button>
-        <button class="read-fab-btn" id="fabTop" type="button" title="回到顶部" aria-label="回到顶部"></button>
+        <!-- 常驻的「展开导航」；展开导航时它会淡出，只留浮层里的「收起导航」 -->
+        <button class="read-fab-btn" id="fabNav" type="button" title="展开导航" aria-label="展开导航" aria-expanded="false"></button>
+
+        <!-- 这两枚才受"标题是否滚出视口"影响：整组一起淡出/收起 -->
+        <div class="read-fab-extra" id="readFabExtra">
+            <button class="read-fab-btn" id="fabBack" type="button" title="返回列表" aria-label="返回列表"></button>
+            <button class="read-fab-btn" id="fabTop" type="button" title="回到顶部" aria-label="回到顶部"></button>
+        </div>
+
+        <!-- 文章导航浮层：从按钮组向左上方展开。标题列表由 blog.js 按正文的 h1/h2 动态生成 -->
+        <nav class="read-nav" id="readNav" aria-label="文章导航" aria-hidden="true">
+            <div class="read-nav-head">
+                <span class="read-nav-title">文章导航</span>
+                <button class="read-nav-fold" id="readNavFold" type="button" title="收起导航" aria-label="收起导航"></button>
+            </div>
+            <div class="read-nav-list" id="readNavList"></div>
+        </nav>
     </div>
 
     <footer class="footer">
@@ -385,15 +410,33 @@
                所以绝不能拿它本身当壁纸地址——那样每次渲染背景、每次下载都会
                变成另一张图（这正是上一版"获取当前壁纸"对不上的根因：
                img.currentSrc 拿到的其实是原始 URL，而不是重定向后的地址）。
-               正确做法：先跟随重定向解析出**真实固定链接**，再用真实链接设背景。 */
+               正确做法：先跟随重定向解析出**真实固定链接**，再用真实链接设背景。
+
+               ⚠️ 线上实测：t.alcy.cc **不返回任何 CORS 头**（ACAO 为 null），
+               所以浏览器端 fetch 读它的字节一定会被拦下 —— 脚本"一键下载"
+               在该图床上根本不可能。因此壁纸改用 <img> 图层显示，
+               拿不到字节时退回"保存模式"，让用户右键/长按存下**屏幕上那张原图**
+               （不需要任何第三方代理，也绝不会给错图）。 */
             const WALLPAPER_API = 'https://t.alcy.cc/ycy';
             const body = document.body;
-            // 当前壁纸状态：url = 写在 body 上的地址；resolved = 该地址是否就是屏幕上那张图；
+            const bgLayer = document.getElementById('bgLayer');
+            const bgSaveHint = document.getElementById('bgSaveHint');
+            // 当前壁纸状态：url = 喂给 <img> 的地址；resolved = 该地址是否就是屏幕上那张图；
             // blob = 直接取下来的图片数据（有它就不必再下载一次）
             let currentBg = { url: '', resolved: false, blob: null, blobUrl: '' };
+            // 进入"保存模式"：把壁纸提到最前 + 显示操作提示
+            function setSaveMode(on) {
+                if (bgLayer) bgLayer.classList.toggle('saving', !!on);
+                if (bgSaveHint) bgSaveHint.hidden = !on;
+            }
 
             function randomWallpaperUrl() {
                 return WALLPAPER_API + '?t=' + Date.now();
+            }
+            // 把壁纸地址交给 <img> 图层（同一 URL 会命中预加载的缓存，不会二次随机）
+            function applyWallpaper(url) {
+                if (bgLayer) bgLayer.src = url;
+                else body.style.backgroundImage = 'url("' + url + '")';   // 极端兜底
             }
             // 预加载（跨域无需 CORS）：让切换背景时不会先白一下
             function preloadImage(url) {
@@ -427,8 +470,9 @@
             }
 
             // 刷新壁纸：① 解析真实链接 → ② 解析不到就取成 blob（也是稳定的同一张）
-            // → ③ 都失败才退回"直接用随机入口"（地址不稳定，无法精确获取）
+            // → ③ 都失败才退回"直接用随机入口"（能显示，但脚本读不到字节）
             async function refreshBackground() {
+                setSaveMode(false);   // 换图时退出保存模式，免得照旧图存
                 if (currentBg.blobUrl) {
                     try { URL.revokeObjectURL(currentBg.blobUrl); } catch (e) { /* 忽略 */ }
                 }
@@ -448,12 +492,14 @@
                         const objUrl = URL.createObjectURL(blob);
                         currentBg = { url: objUrl, resolved: true, blob: blob, blobUrl: objUrl };
                     } catch (e) {
-                        // 图床没开放跨域：只能退回旧办法，背景能显示但不是稳定地址
+                        // 图床没开放跨域（t.alcy.cc 的实际情况）：
+                        // 仍用同一个随机地址喂给 <img>（同 URL 命中预加载缓存，
+                        // 所以屏幕上这张与预加载的是同一张），但脚本读不到它的字节
                         currentBg.url = await preloadImage(reqUrl);
                         currentBg.resolved = false;
                     }
                 }
-                body.style.backgroundImage = 'url("' + currentBg.url + '")';
+                applyWallpaper(currentBg.url);
                 return currentBg.url;
             }
 
@@ -502,16 +548,20 @@
             }
 
             /* 获取当前壁纸：把屏幕上正在显示的那张图存下来。
-               resolved 为真时，currentBg.url 就是屏幕上那张图的固定地址，
-               下载结果必然一致；否则（拿不到真实地址）宁可明确告知，也不给一张错图。
-               保存格式统一为 PNG（转换失败则按原格式保存并说明） */
+               resolved 为真（拿到了字节或真实固定链接）→ 走脚本一键下载；
+               读不到字节（t.alcy.cc 不发 CORS 头，这是线上常态）→ **进入保存模式**：
+               把壁纸提到最前，让用户右键/长按存下屏幕上那张原图。
+               无论哪条路，都绝不会给出一张"和屏幕不一样"的图片。
+               能下载时保存格式统一为 PNG（转换失败则按原格式保存并说明） */
             async function saveCurrentWallpaper() {
                 if (!currentBg.url) {
                     setBgStatus('正在获取壁纸…');
                     await refreshBackground();
                 }
+                // ---- 拿不到字节：走"保存模式"（无需第三方代理，也绝不换图）----
                 if (!currentBg.resolved) {
-                    setBgStatus('拿不到与屏幕一致的原图（图床未开放跨域读取），请先点「刷新背景」重试');
+                    setSaveMode(true);
+                    setBgStatus('图床未开放跨域读取，已进入「保存模式」：右键图片 →「图片另存为」（手机长按图片 →「存储图像」）');
                     return;
                 }
                 const now = new Date();
@@ -549,11 +599,11 @@
                     setTimeout(function() { URL.revokeObjectURL(objUrl); }, 10000);
                     setBgStatus('已开始下载：' + fileName + note);
                 } catch (err) {
-                    // 图床不给 CORS 头 → 退化为新标签页打开固定链接，用户可右键另存
+                    // 兜底也失败（理论上少见）：退化为新标签页打开，用户可右键另存
                     const opened = window.open(currentBg.url, '_blank', 'noopener');
                     setBgStatus(opened
                         ? '该图片不允许直接下载，已在新标签页打开 —— 右键「图片另存为」即可保存'
-                        : '该图片不允许直接下载，且新标签页被浏览器拦截，请允许弹出窗口后重试');
+                        : '该图片不允许直接下载，可点「获取当前壁纸」进入保存模式后右键另存');
                 }
             }
 
@@ -566,6 +616,15 @@
             });
             const saveBgBtn = document.getElementById('settingsSaveBg');
             if (saveBgBtn) saveBgBtn.addEventListener('click', saveCurrentWallpaper);
+            // 保存模式：点「完成」或直接点图片收起
+            const bgSaveHintClose = document.getElementById('bgSaveHintClose');
+            if (bgSaveHintClose) bgSaveHintClose.addEventListener('click', function() { setSaveMode(false); });
+            if (bgLayer) bgLayer.addEventListener('click', function() {
+                if (bgLayer.classList.contains('saving')) setSaveMode(false);
+            });
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') setSaveMode(false);
+            });
 
             // 页面加载后：主动解析一次壁纸（把随机入口换成真实固定链接）
             (function initBackground() {

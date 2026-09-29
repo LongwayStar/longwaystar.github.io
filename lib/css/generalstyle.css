@@ -32,6 +32,8 @@
     --icon-nav: url('../icons/lablesbar_dark.png');   /* 侧边栏汉堡图标 */
     --icon-back: url('../icons/back_dark.png');       /* 阅读视图返回箭头 */
     --icon-totop: url('../icons/totop_dark.png');     /* 回到顶部 */
+    --icon-unfoldnavi: url('../icons/unfoldnavi_dark.png');  /* 展开导航 */
+    --icon-foldnavi: url('../icons/foldnavi_dark.png');      /* 收起导航 */
 }
 [data-theme="dark"] {
     --bg-body: #121e2a;
@@ -50,6 +52,8 @@
     --icon-nav: url('../icons/lablesbar_light.png');
     --icon-back: url('../icons/back_light.png');
     --icon-totop: url('../icons/totop_light.png');
+    --icon-unfoldnavi: url('../icons/unfoldnavi_light.png');
+    --icon-foldnavi: url('../icons/foldnavi_light.png');
 }
 * {
     margin: 0;
@@ -58,11 +62,9 @@
 }
 body {
     background-color: var(--bg-body);
-    background-image: url('https://t.alcy.cc/ycy');
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    background-attachment: fixed;
+    /* 壁纸不再用 CSS 背景：CSS 背景图无法被"图片另存为"保存。
+       改用 body 下的 <img id="bgLayer"> 图层（见 .bg-layer），
+       右键 / 长按就能存下屏幕上那张原图 */
     color: var(--text-primary);
     font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
     min-height: 100vh;
@@ -73,6 +75,63 @@ body {
     padding: 0;
     transition: background-color 0.3s ease, color 0.3s ease;
     line-height: 1.6;
+}
+
+/* ---------- 壁纸图层 ---------- */
+.bg-layer {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    z-index: -1;              /* 垫在所有内容后面 */
+    background-color: var(--bg-body);
+    /* 注意：不能设 pointer-events: none —— 那样就没法右键保存了。
+       它在最底层，内容区的点击仍然由上方元素接住 */
+}
+/* 「保存模式」：把壁纸提到最前面，方便右键/长按另存 */
+.bg-layer.saving {
+    z-index: 99999;
+    cursor: zoom-out;
+}
+.bg-save-hint {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 100000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    padding: 0.7rem 1rem;
+    background: var(--bg-glass);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border-color);
+    box-shadow: var(--shadow);
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    text-align: center;
+}
+.bg-save-hint[hidden] {
+    display: none;
+}
+.bg-save-hint button {
+    padding: 0.3rem 1rem;
+    font-family: inherit;
+    font-size: 0.85rem;
+    color: #fff;
+    background: var(--cyan-500);
+    border: none;
+    border-radius: 999px;
+    cursor: pointer;
+}
+.bg-save-hint button:hover {
+    filter: brightness(1.08);
 }
 
 /* ---------- 主体两栏布局：左侧贴合边栏 + 右侧内容 ---------- */

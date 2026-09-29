@@ -39,7 +39,8 @@ longwaystar.github.io/
 │  │  ├─ title.ico             ← 站点 favicon
 │  │  ├─ lablesbar_light.png / lablesbar_dark.png   ← 侧边栏汉堡图标
 │  │  ├─ back_light.png / back_dark.png             ← 阅读视图返回箭头
-│  │  └─ totop_light.png / totop_dark.png           ← 回到顶部（用于阅读视图右下角浮动按钮）
+│  │  ├─ totop_light.png / totop_dark.png           ← 回到顶部
+│  │  └─ unfoldnavi_*.png / foldnavi_*.png          ← 展开导航 / 收起导航
 │  ├─ images/ fonts/           ← 预留空目录（仅 readme.txt 占位，当前未使用）
 │  └─ words/                   ← 全部"内容数据"
 │     ├─ blogs/                ← 博客数据区
@@ -124,21 +125,18 @@ longwaystar.github.io/
 
 ### 4.3 背景（随机壁纸）
 
-- 来源：第三方 API `https://t.alcy.cc/ycy`（`WALLPAPER_API`）——这是一个**随机壁纸入口**：每次请求都会跳到另一张图，所以**它本身不能当壁纸地址**。
-- **核心：先解析真实固定链接**（`resolveWallpaperRedirect()`）：用 `fetch(..., { method: 'HEAD', redirect: 'follow' })` 跟随重定向，从 `response.url` 拿到**重定向后的真实固定链接**；HEAD 不被支持时退回 GET，并在读到地址后立即 `AbortController.abort()` 中断（不把整张图下下来）。
-  > ⚠️ 曾经的坑：早先版本读的是 `img.currentSrc`，以为那是重定向后的地址——**其实 `currentSrc` 只是"当前选中的源"，没写 `srcset` 时就等于你设进去的原始 URL**。于是背景渲染、下载各请求一次随机入口，拿到的是两张不同的图，这正是"获取当前壁纸拿到的和屏幕上的不一样"的根因。
-- 刷新流程（`refreshBackground()`，侧边栏与设置页两个「刷新背景」按钮都调它）分三级降级：
-  1. **解析到真实链接** → 预加载后设为背景（`currentBg.url`，`resolved = true`）；
-  2. **没重定向 / 解析不到** → 直接 `fetch` 成 blob，用 `URL.createObjectURL()` 产生稳定的同源地址当背景（同样是屏幕上那张图，且已经把数据握在手里）；
-  3. **连 CORS 都没有** → 退回旧办法（`new Image()` 预加载 + 随机入口当背景），`resolved = false`：图能显示，但地址不稳定。
-- **获取当前壁纸**（「关于背景」卡片的按钮，`saveCurrentWallpaper()`）：把屏幕上正在显示的那张图存成文件，文件名形如 `wallpaper-2026-09-28-153012.png`。
-  - 已经是 blob 的直接落盘；否则按**真实固定链接** `fetch` 成 blob，再用同源 blob URL + `<a download>` 触发下载（跨域 URL 直接挂 `download` 会被浏览器忽略，转成 blob URL 才一定生效）；
-  - **保存格式统一为真正的 PNG**（`blobToPng()`）：源图不是 PNG 时用 canvas 重编码（`drawImage` + `toBlob('image/png')`）——注意**只改后缀不算转格式**，JPEG 的字节不会因此变成 PNG。代价是 PNG 无损、体积通常是原 JPEG 的 3~10 倍；
-  - 源图本来就是 PNG 则直接复用，不做多余重编码；`canvas` 不可用或图片超大导致转换失败时，**回退为按原格式保存并在状态行说明**（宁可保持原样，也不给一个名不副实的文件）；
-  - 若某一步读不到字节（图床不给 CORS）→ 退化为在新标签页打开那个**固定链接**，提示右键「图片另存为」；
-  - 若连真实链接都没解析出来（第 3 级降级状态）→ **明确提示拿不到与屏幕一致的原图**，而不是塞给用户一张错图；
+- 来源：第三方 API `https://t.alcy.cc/ycy`（`WALLPAPER_API`）——这是一个**随机壁纸入口**：每次请求都会 302 跳到另一张图（跳转目标是**同域 HTTPS**，形如 `https://t.alcy.cc/pic/pc/<hash>.webp`），所以**它本身不能当壁纸地址**。
+- **壁纸用 `<img id="bgLayer">` 图层显示，不用 CSS 背景**（`.bg-layer`：`position:fixed` + `object-fit:cover` + `z-index:-1`）。原因很实在：**CSS 背景图无法被"图片另存为"保存**，而这张图床的字节在浏览器里根本读不到（见下），图层是唯一能拿到原图的途径。初始 `src` 写在 HTML 里，随解析立刻开始加载，首屏不空。
+  > ⚠️ 两个坑都踩过：① 早先读 `img.currentSrc` 想拿重定向地址——**`currentSrc` 只是"当前选中的源"，没写 `srcset` 时就等于你设进去的原始 URL**；② `.bg-layer` **不能设 `pointer-events: none`**，否则右键保存就没了。
+- **刷新流程**（`refreshBackground()`，侧边栏与设置页两个「刷新背景」按钮都调它）分三级：
+  1. **解析到真实链接**（`resolveWallpaperRedirect()`：`fetch(..., {method:'HEAD', redirect:'follow'})` 读 `response.url`，HEAD 不支持则 GET 并在拿到地址后立即 `AbortController.abort()`）→ 预加载后喂给图层，`resolved = true`；
+  2. **没重定向 / 解析不到** → `fetch` 成 blob，用同源 object URL 当图层地址（数据已在手里），同样 `resolved = true`；
+  3. **连 CORS 都没有**（**这是线上真实情况**）→ 用同一个随机地址喂给图层（同 URL 命中预加载缓存，所以屏幕这张就是预加载那张），`resolved = false`。
+- **线上实测结论（重要）**：`t.alcy.cc` **不返回任何 CORS 头**（带 `Origin: https://longwaystar.github.io` 请求时 `Access-Control-Allow-Origin` 仍为 `null`）。所以浏览器端 `fetch` 读它的字节**一定会被拦下**——**"脚本一键下载"在这张图床上不可能实现**，换成任何第三方 CORS 代理都不稳（本鲸实测 `wsrv.nl` 不可达、`allorigins` 超时、`corsproxy.io` 要 API key，因此**没有引入任何代理依赖**）。
+- **获取当前壁纸**（`saveCurrentWallpaper()`）因此分两条路，**两条都不会给出"和屏幕不一样"的图**：
+  - **能拿到字节时**（`resolved = true`）→ 走脚本一键下载，文件名形如 `wallpaper-2026-09-28-153012.png`：已经是 blob 的直接落盘，否则按真实固定链接 `fetch` 成 blob，再用同源 blob URL + `<a download>` 触发下载（跨域 URL 直接挂 `download` 会被浏览器忽略）；**保存格式统一为真正的 PNG**（`blobToPng()`：源图不是 PNG 时用 canvas 重编码——只改后缀不算转格式），转换失败则按原格式保存并说明；
+  - **拿不到字节时**（现行线上的常态）→ 进入 **「保存模式」**（`setSaveMode()`）：把图层提到最前面（`.bg-layer.saving`，`z-index` 提升）+ 顶部显示提示条，让用户**右键图片 →「图片另存为」**（手机**长按图片 →「存储图像」**）。因为移动/提升的是**同一个已经加载好的 `<img>` 元素**，存下来的就是屏幕上那张原图 ✓。点「完成」/ 点图片 / 按 `Esc` / 刷新壁纸都会退出该模式。
   - 各种结果都会写在卡片的状态行（`#bgStatus`，`.card-status`，为空时 `:empty` 自动不占高度）。
-- CSS 中的 `body { background-image: url('https://t.alcy.cc/ycy') }` 只是首屏默认值，JS 加载后会覆盖成解析出来的固定链接。
 
 ### 4.4 历史版本 / 致谢名单
 
@@ -165,8 +163,17 @@ longwaystar.github.io/
 └─ info/
    ├─ tag.txt          元数据，5 行（缺失行逐行用 default/ 兜底）
    ├─ time.txt         时间数据（缺失时整体用 default/ 的时间）
-   └─ cover.png        列表封面（可选；缺失时由卡片 <img onerror> 降级到 default 封面）
+   ├─ cover.png        列表封面（可选；缺失时由卡片 <img onerror> 降级到 default 封面）
+   └─ cover.txt        封面外链（可选，一行 http(s) 地址；写了就优先用它，**default/ 不参与**）
 ```
+
+#### 封面外链 `info/cover.txt`（可选机制）
+
+- 文件里写**一行 `http(s)` 绝对地址**即可把这张外链图当封面。`pickCoverLink()` 会跳过空行与 `#` 开头的注释行、去掉首尾空格；第一行不合规就接着看下一行；一行可用外链都没有就**回落到约定路径的 `cover.png`**。只认带协议的绝对地址——`www.example.com/a.png` 这种缺协议的会被判为格式错误。
+- **`default/` 不参与**：该目录即使放了 `cover.txt` 也会被忽略（源码里由 `if (folder !== DEFAULT_FOLDER)` 守卫）。
+- **不做链接有效性探测**（探测要整张下载图片，浪费流量）。有效性交给卡片 `<img>` 的 `onerror` **逐级降级**：外链 → 本篇 `cover.png` → `default` 兜底封面。降级用阶段标记推进，**最多换两次**——否则两边都失败时会在 `cover.png` 与 `default` 之间来回跳。
+- **缓存语义**（这条最关键）：`cover.txt` 只在**文章需要重新加载时**读一次，读到的结果随文章一起写进缓存（就是 `cover` 字段）。所以**缓存命中时直接用缓存里的封面，不会再读 `cover.txt`、更不会去加载链接**；只有文章过期（`time.txt` 的最新编辑时间变了）触发重载时，才会重读 `cover.txt` 并采用新链接。换句话说：**改了 `cover.txt` 必须同时更新 `info/time.txt`，封面才会刷新**。
+- 外链地址**原样使用、不追加 `?v=`**（带签名的图床加了参数可能失效）；本地 `cover.png` 那条路仍然带 `?v=最新编辑时间`。
 
 `default/` 兜底目录（同样遵循上面的结构，tag.txt 只有前两行——后面的行留空，这样缺作者/主题的文章不会被塞进假数据）：
 
@@ -248,8 +255,19 @@ loadArticles(needLoad)：有界并发（CONCURRENCY = 4）逐篇 loadArticle()
 - **修改时间上的浮动提示框**：鼠标移入（或键盘聚焦 / 触屏点击）弹出 `.edit-tip` 玻璃小卡片，列出**最近五条编辑记录**（不足五条则全部显示；`editTimes` 升序取末尾 5 条再倒序 → 最新在最上）。由 `buildEditTip()` 构建、`closeEditTips()` 统一收起（点别处或离开文章时），显隐用 opacity + transform + visibility 过渡，风格与右下角浮动按钮一致；触屏下点击触发元素开合（`stopPropagation`，免得被全局收起逻辑立刻关掉）。
 - `closeArticle()`：反向操作，标题恢复 `LongwaySite`，hash **替换**回 `#blog`，并清空 `pendingPostId`（用户主动返回即放弃直达目标）。
 - 直达两种路径：缓存命中 → 立即阅读（无进度条）；未命中 → `enterReadingPlaceholder(id)` 先显示骨架 + 不确定态进度条，加载完成后填充。
-- **右下角浮动按钮**（`#readFab`，DOM 挂在 `<body>` 下）：竖排两枚 —— 上「返回」(`#fabBack`)、下「回到顶部」(`#fabTop`)。二者共用 `handleBackAction()` 与 `backToTop()`；显示时机由 `updateReadFab()` 判定，需**同时**满足"阅读容器可见 **且** 博客标签是激活状态"与"文章标题已滚出视口上方（`#blogReadTitle` 的 `getBoundingClientRect().bottom < 0`）"，滚动/尺寸变化时用 `requestAnimationFrame` 合并更新，显隐靠 `.read-fab.visible` 的 opacity + transform + visibility 过渡。
+- **右下角浮动按钮**（`#readFab`，DOM 挂在 `<body>` 下）：竖排两组 —— 上方是**常驻**的「展开导航」(`#fabNav`)，下方是一个 `.read-fab-extra` 分组，装着「返回」(`#fabBack`) 与「回到顶部」(`#fabTop`)。显隐规则由 `updateReadFab()` 判定，三个类各管一段：
+  - `.read-fab.visible` —— 只看"是否处于阅读视图"（阅读容器可见 **且** 博客标签激活）。**导航按钮要常驻，所以不能跟着滚动位置忽隐忽现**；
+  - `.read-fab-extra.hidden-extra` —— 才看"文章标题是否已滚出视口上方（`#blogReadTitle` 的 `getBoundingClientRect().bottom < 0`）"，只有这两枚按钮受滚动影响；
+  - `#fabNav.is-hidden` —— 不在阅读视图、或导航已展开时淡出，并且**把 `max-height` 与 `border-width` 一起收掉**（否则会在原位留一条边框细线），这样浮层会平滑滑到按钮原来的位置上，不会空出一格。
+  滚动/尺寸变化用 `requestAnimationFrame` 合并更新；返回/回到顶部共用 `handleBackAction()` 与 `backToTop()`。
   > 为什么按钮不放在 `.blog-browse` 里：该容器带 `backdrop-filter`，会让 `position: fixed` 的包含块退化成它本身，按钮就不再相对视口固定了——所以浮动按钮必须挂在 `<body>` 下。同理，`.blog-back` 与浮动按钮的图标都改用 `background-color` + `background-image`，避免 `background` 简写把图标重置掉。
+- **文章导航浮层**（`#readNav`，放在按钮组内部，`right:0` + `bottom:100%` 所以是**朝左上展开**）：
+  - `buildReadNav()` 在每次 `openArticle()` 后按正文里的 **h1 / h2** 重建目录——标题本身没有 id，这里统一补上 `read-heading-N`，目录项用 `data-target` 指过去；h2 缩进一级（`.lvl-2`）；**一个 h1/h2 都没有时显示「暂无标题」**。
+  - 点目录项 → `jumpToHeading()` → `scrollIntoView({behavior:'smooth', block:'start'})`；顶栏避让交给 CSS 的 `scroll-margin-top: 4.5rem`（手机上侧边栏是 sticky 顶栏）。跳转后浮层**保持展开**，由用户自己收起。
+  - 浮层右上角是「收起导航」小按钮（`#readNavFold`，用 `foldnavi_*` 图标），点它回到「展开导航」状态；`aria-expanded` 随之同步。**展开期间「展开导航」按钮隐藏**，由这个收起按钮接手。
+  - **展开状态不做任何记忆**，且展开后会**自动收起**：① 用户一滚动页面就收起（滚动监听里 `isReadNavOpen()` 为真时立刻 `setReadNavOpen(false)`；浮层**内部**目录列表的滚动事件不冒泡到 window，所以翻目录不会误收）；② 停留满 3 秒自动收起（`READ_NAV_AUTO_CLOSE_MS`，每次展开重新计时，收起时清掉计时器）。换文章、返回列表、切走标签同样会收起。
+  - **动画**：浮层显隐**不用 `hidden` 属性**（那是 `display:none`，做不了过渡），改用 `.open` 类 + opacity/transform/visibility 过渡（收起时 `visibility` 延迟到过渡结束再切换，保证淡出能播完）；`.read-fab-extra` 收起时会连 `max-height` 一起动画，所以「返回/回到顶部」出现或消失时，导航按钮不会突然跳位。
+  - **目录条的"腰斩"问题**（标题多、需要滚动时，滚出边界的那条只露出上半截字）：三处一起解决 —— ① `.read-nav-item` 加 `flex-shrink: 0`，防止 flex 列把条目压扁；② 滚动区 `.read-nav-list` 底部加渐隐 `mask-image`，越界的那条**淡出**而不是被硬切；③ `scroll-snap-type: y proximity` + 条目的 `scroll-snap-align: start`，停下时对齐到条目边界，再配一点 `padding-bottom` 留余量。
 
 #### 自研 Markdown 渲染器（`parseInline` 行内解析 / `renderMarkdown` 块级渲染）
 
@@ -325,7 +343,8 @@ loadArticles(needLoad)：有界并发（CONCURRENCY = 4）逐篇 loadArticle()
 
 | 想做的事 | 改哪里 |
 |---|---|
-| 发一篇新文章 | 新建 `lib/words/blogs/<名字>/`：`passage.md` + `info/tag.txt` + `info/cover.png`（可选 `img/`），跑一次 `update_info.bat`。三者都可缺省，会分别落到 `default/` |
+| 发一篇新文章 | 新建 `lib/words/blogs/<名字>/`：`passage.md` + `info/tag.txt` + `info/cover.png`（可选 `img/`、`info/cover.txt` 外链封面），跑一次 `update_info.bat`。三者都可缺省，会分别落到 `default/` |
+| 换封面（用外链图） | 在 `info/cover.txt` 写一行 `http(s)` 地址，并**同时更新 `info/time.txt`**（否则缓存不刷新）。`default/` 不支持该机制 |
 | 改文章标题/描述/日期/主题/id | 该文章的 `info/tag.txt`（改 id 后必须跑 `update_info.bat`） |
 | 加/删/排序文章 | 直接编辑 `lib/words/blogs/list.txt`（或让脚本重建） |
 | 改全站配色、玻璃感、圆角、字体、间距 | `lib/css/generalstyle.css` 的 `:root` / `[data-theme="dark"]` 变量 |
@@ -336,13 +355,13 @@ loadArticles(needLoad)：有界并发（CONCURRENCY = 4）逐篇 loadArticle()
 | 调整站内导航语义（返回按钮、历史条目） | `index.html` 的 `window.AppNav` + `showTab(name, mode)`；`blog.js` 的 `openArticle(a, mode)` |
 | 改博客卡片比例、筛选栏宽度、阅读排版 | `lib/css/blog.css`（卡片 2:8 在 `.blog-item-cover` / `.blog-item-meta`） |
 | 改表格 / 阅读区其他排版样式 | `lib/css/blog.css` 的 `.blog-read-content table`、`.md-table-wrap` |
-| 改右下角浮动按钮（出现时机 / 位置 / 动画） | 时机与判定：`lib/js/blog.js` 的 `updateReadFab()`；外观与动画：`lib/css/blog.css` 的 `.read-fab` / `.read-fab.visible`；DOM：`index.html` 的 `#readFab`（必须挂在 `<body>` 下） |
+| 改浮动按钮 / 文章导航（出现时机、位置、动画、目录规则） | 时机判定：`blog.js` 的 `updateReadFab()`；目录构建与跳转：`buildReadNav()` / `jumpToHeading()` / `setReadNavOpen()`；外观：`blog.css` 的 `.read-fab` / `.read-nav`；DOM：`index.html` 的 `#readFab`（必须挂在 `<body>` 下） |
 | 改筛选维度（如再加"按年份筛"） | `lib/js/blog.js` 的 `getFiltered()`（加过滤分支）+ 同级 `filterXxx` 状态 + `bindFilter()` 绑定输入框 + `renderLoading()` 的筛选守卫 + 重置按钮 |
 | 改每页条数 | `lib/js/blog.js` 的 `PER_PAGE`（当前 10） |
 | 改并发数（加载速度 vs 请求数） | `lib/js/blog.js` 的 `CONCURRENCY`（当前 4） |
 | 支持新的 Markdown 语法 | 行内标记加进 `lib/js/blog.js` 的 `patterns` 数组；块级语法在 `renderMarkdown()` 的主循环里加分支（表格就是照这个路子加的：`splitTableRow()` / `isTableDelimiter()` / `renderTable()`） |
-| 换壁纸来源 | `index.html` 的 `WALLPAPER_API`（随机入口）+ `resolveWallpaperRedirect()`（解析真实链接） |
-| 改「获取当前壁纸」的下载/兜底行为 | `index.html` 的 `saveCurrentWallpaper()`（状态提示在 `#bgStatus`）与 `blobToPng()`（保存格式转换） |
+| 换壁纸来源 | `index.html` 的 `WALLPAPER_API`（随机入口）+ `resolveWallpaperRedirect()`（解析真实链接）+ `#bgLayer` 图层 |
+| 改「获取当前壁纸」的下载/兜底行为 | `index.html` 的 `saveCurrentWallpaper()`（状态提示在 `#bgStatus`）、`blobToPng()`（格式转换）、`setSaveMode()`（保存模式） |
 | 改历史版本 / 致谢内容 | `lib/words/historylist/*.txt`、`lib/words/thanks/致谢名单.txt`（纯文本，一行一条） |
 | 加一个新标签页 | 四处同步：`index.html` 侧边栏加 `.tab`（`data-tab="x"`）与 `<section id="tab-x">`、把 `#x` 加进 `VALID_TAGS`、在 `renderTab()` 里按需加载数据 |
 | 改版本号 / 记录本次更新 | `README.txt` + `lib/words/historylist/RELEASE版本.txt`（沿用 `REALEASE1.1.x更新内容：…` 写法） |
@@ -424,7 +443,7 @@ node -e "const h=require('http'),f=require('fs'),p=require('path');h.createServe
    - 第 1 行撰写时间，第 2 行固定空白，第 3 行起是修改时间（升序，可省），**最后一行即最新编辑时间**；
    - 没有任何修改时只写第 1 行即可（此时最新编辑时间 = 撰写时间）；
    - **改完文章一定要更新这里的最后一行**，否则浏览器缓存不会知道这篇变了。
-5. **放封面**：可选，`info/cover.png`。**推荐比例 4:5（0.8，略竖）**，例如 **400×500 px** 就够（卡片上最大只显示到约 80×99 px，2 倍屏也只要 160×198）；缺省时列表卡片会自动降级到 `default/info/cover.png`。详见下面的「封面比例怎么定」。
+5. **放封面**：可选，`info/cover.png`。**推荐比例 4:5（0.8，略竖）**，例如 **400×500 px** 就够（卡片上最大只显示到约 80×99 px，2 倍屏也只要 160×198）；缺省时列表卡片会自动降级到 `default/info/cover.png`。也可以用 `info/cover.txt` 写一行外链地址来替代（见「封面外链」一节）。详见下面的「封面比例怎么定」。
 6. **跑脚本**：双击 `lib/words/blogs/update_info.bat`。它会按 `tag.txt` 第 5 行重命名文件夹（若与 id 不一致）并重建 `list.txt`（UTF-8 BOM、按 id 排序）。看到 `list.txt updated with N ID(s).` 即为成功。
 7. **本地确认**：起个静态服务器（见第七节）打开 `#blog`，确认新卡片出现（标题 + 第一位作者 + 最新编辑时间）、封面/描述正常、点进去正文渲染正确、作者与最新编辑时间在元信息行最右侧。
 8. **提交**：`git add` → `git commit` → `git push`；GitHub Pages 会自动发布，**无需任何构建**。顺手把本次改动写进 `lib/words/historylist/RELEASE版本.txt`（沿用 `REALEASE1.1.x更新内容：…` 写法）与 `README.txt` 的版本号。

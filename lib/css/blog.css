@@ -467,8 +467,12 @@
 /* 返回箭头已改为按钮的 background-image（原来的 <img> 已移除），
    因此不再需要 .blog-back img 规则 */
 
-/* ---------- 阅读视图浮动按钮（右下角竖排：上「返回」/ 下「回到顶部」） ----------
-   显示条件由 blog.js 掌管：仅在阅读视图、且文章标题滚出视口后加 .visible。
+/* ---------- 阅读视图浮动按钮 ----------
+   布局：竖排「展开导航」（常驻） + 一组「返回 / 回到顶部」（标题滚出视口才出现）。
+   显示条件由 blog.js 掌管：
+     .read-fab.visible              = 处于阅读视图（导航按钮要常驻，所以只跟视图有关）
+     .read-fab-extra.hidden-extra   = 看不到文章标题了（这两枚才出现）
+     #fabNav.is-hidden              = 不在阅读视图 / 导航已展开（此时由浮层里的收起按钮接手）
    元素在 <body> 下（不能在 .blog-browse 里，那里的 backdrop-filter 会把
    position:fixed 的包含块吃掉），所以这里可以安全地相对视口定位。 */
 .read-fab {
@@ -478,8 +482,9 @@
     bottom: calc(1.4rem + env(safe-area-inset-bottom, 0px));
     z-index: 45;                 /* 高于内容与页脚，低于侧边栏展开按钮(60) */
     display: flex;
-    flex-direction: column;      /* 竖排：DOM 顺序 = 上返回、下回到顶部 */
-    gap: 0.7rem;
+    flex-direction: column;      /* 竖排：上「展开导航」、下「返回 / 回到顶部」 */
+    /* 注意：这里不用 gap —— 间距交给 .read-fab-extra 的 margin 与内部间距，
+       这样整组收起时高度能平滑归零，导航按钮不会突然跳位 */
     /* 隐藏态：淡出 + 略微下移缩小。visibility 延迟切换，
        保证淡出动画能播完（否则会瞬间消失） */
     opacity: 0;
@@ -496,6 +501,29 @@
     pointer-events: auto;
     transition: opacity 0.28s ease, transform 0.28s cubic-bezier(0.2, 0.7, 0.3, 1),
                 visibility 0s linear 0s;
+}
+/* 「返回 / 回到顶部」整组：随"标题是否可见"平滑收起/展开（高度也动画，避免跳位） */
+.read-fab-extra {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    max-height: 200px;
+    margin-top: 0.7rem;
+    opacity: 1;
+    transition: max-height 0.3s ease, margin-top 0.3s ease, opacity 0.22s ease;
+}
+.read-fab-extra.hidden-extra {
+    max-height: 0;
+    margin-top: 0;
+    opacity: 0;
+    pointer-events: none;
+}
+.read-fab-extra .read-fab-btn + .read-fab-btn {
+    margin-top: 0.7rem;
+}
+/* 常驻的导航按钮：展开导航时淡出，且占位由下方 #fabNav 的规则一并收回 */
+#fabNav {
+    transition: opacity 0.22s ease, transform 0.22s ease;
 }
 .read-fab-btn {
     /* 44px 是移动端推荐的舒适点击尺寸 */
@@ -518,6 +546,154 @@
 }
 #fabBack { background-image: var(--icon-back); }    /* 与阅读页右上角的返回图标同源 */
 #fabTop  { background-image: var(--icon-totop); }
+#fabNav  { background-image: var(--icon-unfoldnavi); }
+/* 常驻的导航按钮：展开导航时把**占位也一起收回去**，
+   这样浮层就会滑到按钮原来的位置上（而不是空出一格）。
+   max-height + border-width 一起动画，收起过程是平滑的。 */
+#fabNav {
+    max-height: 44px;
+    transition: opacity 0.22s ease, transform 0.22s ease,
+                max-height 0.24s ease, border-width 0.24s ease;
+}
+#fabNav.is-hidden {
+    max-height: 0;
+    border-width: 0;             /* 不收边框会在原位留一条细线 */
+    overflow: hidden;
+    opacity: 0;
+    transform: scale(0.9);
+    pointer-events: none;
+}
+/* ---------- 文章导航浮层（从按钮组向左上展开） ---------- */
+.read-nav {
+    position: absolute;
+    right: 0;                       /* 右边缘对齐按钮组 → 往左展开 */
+    bottom: calc(100% + 0.7rem);    /* 底边在按钮组上方 → 往上展开 */
+    z-index: 46;
+    width: min(19rem, 68vw);
+    max-height: min(60vh, 24rem);
+    display: flex;
+    flex-direction: column;
+    padding: 0.5rem 0.55rem 0.55rem;
+    background: var(--bg-card);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    /* 显隐动画：与浮动按钮同一套语言，朝右下角方向缩放淡入 */
+    opacity: 0;
+    visibility: hidden;
+    transform: translate(0.6rem, 0.6rem) scale(0.96);
+    transform-origin: bottom right;
+    pointer-events: none;
+    transition: opacity 0.22s ease, transform 0.22s cubic-bezier(0.2, 0.7, 0.3, 1),
+                visibility 0s linear 0.22s;
+}
+/* hidden 属性已不再使用：显隐统一靠 .open 类（hidden 是 display:none，做不了动画） */
+.read-fab.visible .read-nav.open {
+    opacity: 1;
+    visibility: visible;
+    transform: translate(0, 0) scale(1);
+    pointer-events: auto;
+    transition: opacity 0.22s ease, transform 0.22s cubic-bezier(0.2, 0.7, 0.3, 1),
+                visibility 0s linear 0s;
+}
+.read-nav-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.15rem 0.15rem 0.45rem;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 0.35rem;
+    flex-shrink: 0;
+}
+.read-nav-title {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--footer-color);
+}
+.read-nav-fold {
+    flex-shrink: 0;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    background-color: var(--bg-glass);
+    background-image: var(--icon-foldnavi);
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 15px auto;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: border-color 0.18s ease, transform 0.18s ease;
+}
+.read-nav-fold:hover {
+    border-color: var(--cyan-500);
+}
+.read-nav-fold:active {
+    transform: scale(0.92);
+}
+.read-nav-list {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    -webkit-overflow-scrolling: touch;
+    /* ★ 解决"标题多时最后一条被腰斩"：滚动区边缘做渐变遮罩，
+       越界的那条会淡出而不是被硬切一半；再配合滚动吸附，
+       停下时条目会对齐到顶部，减少"半截"的观感 */
+    -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 18px), transparent 100%);
+    mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 18px), transparent 100%);
+    scroll-snap-type: y proximity;
+    padding-bottom: 0.35rem;   /* 给最后一条留出余量，别紧贴遮罩 */
+}
+.read-nav-item {
+    display: block;
+    width: 100%;
+    padding: 0.4rem 0.5rem;
+    font-family: inherit;
+    font-size: 0.85rem;
+    line-height: 1.45;
+    text-align: left;
+    color: var(--text-primary);
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    /* 长标题单行省略，保持目录整洁 */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    /* 防止条目被压扁（flex 列里默认允许收缩，行高会被挤到"半截"） */
+    flex-shrink: 0;
+    scroll-snap-align: start;
+    transition: background-color 0.18s ease, color 0.18s ease, padding-left 0.18s ease;
+}
+.read-nav-item.lvl-2 {
+    padding-left: 1.15rem;          /* h2 缩进一级 */
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+.read-nav-item:hover {
+    background: rgba(6, 182, 212, 0.1);
+    color: var(--cyan-500);
+    padding-left: 0.75rem;
+}
+.read-nav-item.lvl-2:hover {
+    padding-left: 1.4rem;
+}
+.read-nav-item:focus-visible {
+    outline: 2px solid var(--cyan-500);
+    outline-offset: 1px;
+}
+.read-nav-empty {
+    padding: 0.9rem 0.5rem;
+    text-align: center;
+    font-size: 0.85rem;
+    color: var(--footer-color);
+}
 /* 只在真正支持“悬停”的设备上应用悬停反馈：
    触屏上 :hover 会粘住不放，还会盖掉 :active 的按下反馈 */
 @media (hover: hover) {
@@ -687,6 +863,11 @@
 .blog-read-content h6 {
     margin: 1.2em 0 0.5em;
     line-height: 1.4;
+}
+/* 目录跳转时避让顶部（手机上侧边栏会变成 sticky 顶栏） */
+.blog-read-content h1,
+.blog-read-content h2 {
+    scroll-margin-top: 4.5rem;
 }
 .blog-read-content p {
     margin: 0.6em 0;
