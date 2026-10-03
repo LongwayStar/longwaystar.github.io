@@ -1,13 +1,17 @@
-# LongwaySite项目结构分析
+# LongwaySite 项目结构分析
 
 | 项 | 值 |
 |---|---|
-| 最后更新 | 2026-09-28 |
+| 最后更新 | 2026-10-03 |
 | 仓库 | https://github.com/LongwayStar/longwaystar.github.io |
 | 部署 | GitHub Pages，`main` 分支根目录，域名 `longwaystar.github.io` |
-| 代码规模 | `index.html` 668 行 · `lib/js/blog.js` 1489 行 · 两份 CSS 共 1612 行 |
+| 代码规模 | `index.html` 811 行 · `lib/js/blog.js` 1704 行 · 两份 CSS 共 1793 行 |
 
-**本文覆盖面**：目录结构 → 页面架构与路由 → 七个功能模块的实现方式 → 状态与缓存键 → 改动入口速查表 → 本地预览 → 验证方法 → 新增文章的完整步骤。
+**本文覆盖面**：目录结构 → 页面架构与路由 → 七个功能模块的实现方式（主题 / 侧边栏 / 背景 / 历史与致谢 / 博客核心 / 维护脚本 / 子站点）→ 状态与缓存键 → 改动入口速查表 → 本地预览 → 验证方法 → 附录（新增文章的完整步骤、一句话总览）。
+
+**阅读建议**：想改内容看 §4.5 的数据契约与附录 A；想改样式看两份 CSS 的变量（§六 速查表）；想改行为看 §4.5 与 `blog.js`；**只想知道"这是什么"看附录 B**。
+
+> **维护约定（改本文时请照做）**：每次改动这篇文章后，把 `info/time.txt` 的**最后一行**改成当天日期（紧凑写法 `YYYYMMDD`，如 `20261003`）。**当天已经写过就不必重复添加**（同一天不会因为多写一行而让缓存失效，反而会在悬停提示里出现两条相同日期）。这一行是读者端缓存判断"这篇变了没有"的唯一依据——不更新，读者看到的就还是旧版。
 
 ---
 
@@ -28,30 +32,29 @@
 ```
 longwaystar.github.io/
 ├─ index.html                  ← 唯一入口页（单页应用外壳；`<head>` 内联主题初始化脚本，`</body>` 前内联主脚本）
-├─ README.txt                  ← 简介与当前版本号（已同步至 REALEASE1.1.4）
+├─ README.txt                  ← 简介与当前版本号（已同步至 RELEASE1.2.1）
 ├─ lib/                        ← 资源库
 │  ├─ css/
-│  │  ├─ generalstyle.css      ← 全局主题变量、布局、侧边栏、卡片、页脚、响应式
-│  │  └─ blog.css              ← 博客模块专属样式（列表/卡片/筛选/分页/阅读视图）
+│  │  ├─ generalstyle.css      ← 全局：主题变量、布局、侧边栏、卡片、页脚、背景图层、响应式
+│  │  └─ blog.css              ← 博客专属：列表/卡片/筛选/分页/阅读视图/浮动按钮与导航
 │  ├─ js/
-│  │  └─ blog.js               ← 博客模块全部逻辑（约 1490 行，含自研 Markdown 渲染器 + HTML 白名单清洗器）
+│  │  └─ blog.js               ← 博客模块全部逻辑（含自研 Markdown 渲染器 + HTML 白名单清洗器）
 │  ├─ icons/                   ← 图标：成对提供 light / dark 两版，按主题自动切换
-│  │  ├─ title.ico             ← 站点 favicon
-│  │  ├─ lablesbar_light.png / lablesbar_dark.png   ← 侧边栏汉堡图标
-│  │  ├─ back_light.png / back_dark.png             ← 阅读视图返回箭头
-│  │  ├─ totop_light.png / totop_dark.png           ← 回到顶部
-│  │  └─ unfoldnavi_*.png / foldnavi_*.png          ← 展开导航 / 收起导航
+│  │  ├─ title.ico                          ← 站点 favicon
+│  │  ├─ lablesbar_light|dark.png           ← 侧边栏汉堡图标
+│  │  ├─ back_light|dark.png                ← 阅读视图返回箭头
+│  │  ├─ totop_light|dark.png               ← 回到顶部
+│  │  └─ unfoldnavi_light|dark.png          ← 展开导航
+│  │     foldnavi_light|dark.png            ← 收起导航
 │  ├─ images/ fonts/           ← 预留空目录（仅 readme.txt 占位，当前未使用）
 │  └─ words/                   ← 全部"内容数据"
 │     ├─ blogs/                ← 博客数据区
-│     │  ├─ list.txt           ← 文章清单（每行一个文章文件夹名/id）
+│     │  ├─ list.txt           ← 文章清单（UTF-8 带 BOM；每行一个文章文件夹名 = 文章 id）
 │     │  ├─ update_info.bat    ← 数据维护脚本：按 tag.txt 重命名文件夹并重建 list.txt
-│     │  ├─ default/           ← 兜底数据（缺 tag.txt / passage.md / cover.png 时逐项降级使用）
+│     │  ├─ default/           ← 兜底数据（缺 tag.txt / passage.md / cover.png 时逐项降级）
+│     │  ├─ life_in_militrain/ ← 文章：军训经历
 │     │  ├─ site_info_1/       ← 文章：本站的起源
-│     │  │  ├─ passage.md      ← 正文（Markdown 子集）
-│     │  │  ├─ info/tag.txt    ← 元数据（5 行）
-│     │  │  ├─ info/cover.png  ← 列表封面图
-│     │  │  └─ img/1..5.jpg    ← 正文插图（相对路径引用）
+│     │  ├─ site_info_2/       ← 文章：项目结构分析（就是本文）
 │     │  └─ test_1/            ← 文章：测试文章（最小样例）
 │     ├─ historylist/          ← RELEASE版本.txt / BETA版本.txt（历史版本面板数据）
 │     └─ thanks/致谢名单.txt    ← 设置页致谢列表数据
@@ -59,6 +62,8 @@ longwaystar.github.io/
    ├─ oldlook/                 ← 旧版主页（保留展示用，已停止维护）
    └─ testground/              ← 空白测试页（Hello World）
 ```
+
+每篇文章文件夹内部的固定结构（`passage.md` + `info/` 四个可选文件）见 §4.5 的「数据契约」，这里不重复展开。
 
 > 验证方式见第八节，新增文章步骤见附录 A。
 
@@ -125,18 +130,40 @@ longwaystar.github.io/
 
 ### 4.3 背景（随机壁纸）
 
-- 来源：第三方 API `https://t.alcy.cc/ycy`（`WALLPAPER_API`）——这是一个**随机壁纸入口**：每次请求都会 302 跳到另一张图（跳转目标是**同域 HTTPS**，形如 `https://t.alcy.cc/pic/pc/<hash>.webp`），所以**它本身不能当壁纸地址**。
-- **壁纸用 `<img id="bgLayer">` 图层显示，不用 CSS 背景**（`.bg-layer`：`position:fixed` + `object-fit:cover` + `z-index:-1`）。原因很实在：**CSS 背景图无法被"图片另存为"保存**，而这张图床的字节在浏览器里根本读不到（见下），图层是唯一能拿到原图的途径。初始 `src` 写在 HTML 里，随解析立刻开始加载，首屏不空。
-  > ⚠️ 两个坑都踩过：① 早先读 `img.currentSrc` 想拿重定向地址——**`currentSrc` 只是"当前选中的源"，没写 `srcset` 时就等于你设进去的原始 URL**；② `.bg-layer` **不能设 `pointer-events: none`**，否则右键保存就没了。
-- **刷新流程**（`refreshBackground()`，侧边栏与设置页两个「刷新背景」按钮都调它）分三级：
-  1. **解析到真实链接**（`resolveWallpaperRedirect()`：`fetch(..., {method:'HEAD', redirect:'follow'})` 读 `response.url`，HEAD 不支持则 GET 并在拿到地址后立即 `AbortController.abort()`）→ 预加载后喂给图层，`resolved = true`；
-  2. **没重定向 / 解析不到** → `fetch` 成 blob，用同源 object URL 当图层地址（数据已在手里），同样 `resolved = true`；
-  3. **连 CORS 都没有**（**这是线上真实情况**）→ 用同一个随机地址喂给图层（同 URL 命中预加载缓存，所以屏幕这张就是预加载那张），`resolved = false`。
-- **线上实测结论（重要）**：`t.alcy.cc` **不返回任何 CORS 头**（带 `Origin: https://longwaystar.github.io` 请求时 `Access-Control-Allow-Origin` 仍为 `null`）。所以浏览器端 `fetch` 读它的字节**一定会被拦下**——**"脚本一键下载"在这张图床上不可能实现**，换成任何第三方 CORS 代理都不稳（本鲸实测 `wsrv.nl` 不可达、`allorigins` 超时、`corsproxy.io` 要 API key，因此**没有引入任何代理依赖**）。
-- **获取当前壁纸**（`saveCurrentWallpaper()`）因此分两条路，**两条都不会给出"和屏幕不一样"的图**：
-  - **能拿到字节时**（`resolved = true`）→ 走脚本一键下载，文件名形如 `wallpaper-2026-09-28-153012.png`：已经是 blob 的直接落盘，否则按真实固定链接 `fetch` 成 blob，再用同源 blob URL + `<a download>` 触发下载（跨域 URL 直接挂 `download` 会被浏览器忽略）；**保存格式统一为真正的 PNG**（`blobToPng()`：源图不是 PNG 时用 canvas 重编码——只改后缀不算转格式），转换失败则按原格式保存并说明；
-  - **拿不到字节时**（现行线上的常态）→ 进入 **「保存模式」**（`setSaveMode()`）：把图层提到最前面（`.bg-layer.saving`，`z-index` 提升）+ 顶部显示提示条，让用户**右键图片 →「图片另存为」**（手机**长按图片 →「存储图像」**）。因为移动/提升的是**同一个已经加载好的 `<img>` 元素**，存下来的就是屏幕上那张原图 ✓。点「完成」/ 点图片 / 按 `Esc` / 刷新壁纸都会退出该模式。
-  - 各种结果都会写在卡片的状态行（`#bgStatus`，`.card-status`，为空时 `:empty` 自动不占高度）。
+**来源**：第三方 API `https://api.yppp.net/api.php`（常量 `WALLPAPER_API`）。它是一个**随机壁纸入口**——每次请求都 302 跳到另一张图（跳转链：`api.php` → `302 pc.php` → `302 https://list.yppp.net/d/image/<hash>.{webp,png,jpg}`），所以**入口地址本身不能当壁纸地址**，必须先解析出跳转后的固定链接。
+
+**显示方式**：独立的「背景图层」`<div class="bg-layer" id="bgLayer">`，JS 只改它的 `background-image`。
+
+| CSS 属性 | 值 | 作用 |
+|---|---|---|
+| `position` / 宽高 | `fixed` + `inset` 铺满 | 与视口同尺寸 |
+| `z-index` | `-1` | 垫在所有内容后面 |
+| `background-size` / `-position` | `cover` / `center` | 居中裁切铺满 |
+| `pointer-events` | `none` | 纯装饰层，空白处的点击与"从空白处起手的文本选择"都落到页面本身 |
+
+- **为什么用背景层而不是 `<img>`**：背景不会被选中/拖动，加载失败也**不会露出破图占位**（失败时只是这一层不显示，底下 `body` 的 `--bg-body` 纯色兜着）。
+- **HTML 里特意不写默认壁纸**：交给 JS 解析出真实固定链接后**一次铺上**，避免"先下一张随机图、再换成另一张"白费好几 MB 流量。代价是首屏有短暂纯色底色。
+
+**刷新流程**（`refreshBackground()`；侧边栏的「刷新背景」与设置页的按钮都调它）分三级降级：
+
+| 级别 | 条件 | 做法 | 结果 |
+|---|---|---|---|
+| ① | 能解析出跳转后的地址 | `resolveWallpaperRedirect()` 用 `HEAD`（`redirect:'follow'`）读 `response.url`；HEAD 不被支持就退回 GET，并在拿到地址后立刻 `AbortController.abort()`。先 `preloadImage()` 预热再铺图 | `resolved = true`，**当前 API 走的就是这一级** |
+| ② | 没重定向 / 解析不到 | 直接 `fetch` 成 blob，用同源 object URL 当背景（字节已经在手里） | `resolved = true` |
+| ③ | 连 CORS 都没有 | 把随机入口地址原样当背景铺上 | `resolved = false`（能看，但读不到字节） |
+
+**获取当前壁纸**（`saveCurrentWallpaper()`）分两条路，**都不会给出"和屏幕不一样"的图**：
+
+- **能拿到字节时**（`resolved = true`，当前 API 的正常情况）→ 脚本一键下载，文件名形如 `wallpaper-2026-09-28-153012.png`：已经取过 blob 的直接落盘，否则按**真实固定链接** `fetch` 成 blob，再用同源 blob URL + `<a download>` 触发下载（跨域 URL 直接挂 `download` 会被浏览器忽略）。**保存格式统一为真正的 PNG**（`blobToPng()`：源图不是 PNG 时用 canvas 重编码——只改后缀不算转格式；转不动就按原格式保存并说明）。
+- **拿不到字节时**（将来又换成不发 CORS 的图床才会走到）→ 只如实说明"无法取出与屏幕一致的原图"，**绝不**给一张错图。
+- 各种结果都会写在卡片的状态行（`#bgStatus`，`.card-status`，为空时 `:empty` 自动不占高度）。
+
+**踩坑记录（都在这里踩过一遍）**
+
+1. **`img.currentSrc` 不等于重定向后的地址**——它只是"当前选中的源"，没写 `srcset` 时就等于你设进去的原始 URL。早期版本据此记录壁纸地址，导致"渲染的背景"和"下载的图"各请求一次随机入口、拿到两张不同的图。
+2. **图床不给 CORS 头就什么都读不到**：老图床 `t.alcy.cc` 带 `Origin: https://longwaystar.github.io` 请求时 `Access-Control-Allow-Origin` 仍为 `null`，浏览器端 `fetch` 读它的字节一定被拦下，脚本一键下载在那张图床上**根本不可能**。（当时试过第三方 CORS 代理：`wsrv.nl` 不可达、`allorigins` 超时、`corsproxy.io` 要 API key，都不适合当依赖，因此**没有引入任何代理**。）现行 API `api.yppp.net` 整条跳转链都带 `Access-Control-Allow-Origin: *`（连中间两个 302 都有），所以 `fetch` 既能读到固定链接、也能读到图片字节——**换 API 时并没有改逻辑**，那套写法本来就在，只是被老图床的 CORS 掐死了。
+3. **右键另存兜底的兴衰**：中间曾把壁纸改成 `<img>` 图层，专为"读不到字节时让用户右键存原图"（那时**不能**设 `pointer-events:none`）。换成有 CORS 的 API 后一键下载成为主路，这套「保存模式」既不可能生效又容易误导，已随 `<img>` 一起移除。
+   > **换图床的第一件事：确认它带 `Access-Control-Allow-Origin`**，否则一键下载会退化。
 
 ### 4.4 历史版本 / 致谢名单
 
@@ -147,7 +174,7 @@ longwaystar.github.io/
 3. 成功则写缓存 + 重渲染；失败时若**无缓存**才报错，有缓存则保留旧内容。
 
 - 用 `historyLoaded` / `thanksLoaded` 布尔标志保证只加载一次（懒加载 + 幂等）。
-- **编码约定（实测确认）**：`list.txt` 带 UTF-8 BOM（由 `update_info.bat` 写出，`blog.js` 用 `trim()` 顺带吃掉 BOM）；`tag.txt`、`passage.md`、`historylist/*.txt`、`致谢名单.txt` **都不带 BOM**。手工编辑这些文件时请保持 UTF-8 无 BOM，否则 `tag.txt` 第 1 行的标题会带上不可见字符。
+- **编码约定（实测确认）**：`list.txt` 带 UTF-8 BOM（由 `update_info.bat` 写出，`blog.js` 用 `trim()` 顺带吃掉 BOM）；`tag.txt`、`passage.md`、`info/cover.txt`、`historylist/*.txt`、`致谢名单.txt` **都不带 BOM**。手工编辑这些文件时请保持 UTF-8 无 BOM，否则 `tag.txt` 第 1 行的标题会带上不可见字符。（`cover.txt` 的解析对 BOM 宽容——`pickCoverLink()` 会 `trim()` 每一行，BOM 会被当作空白吃掉。）
 
 ### 4.5 博客模块 `lib/js/blog.js`（项目核心）
 
@@ -163,17 +190,9 @@ longwaystar.github.io/
 └─ info/
    ├─ tag.txt          元数据，5 行（缺失行逐行用 default/ 兜底）
    ├─ time.txt         时间数据（缺失时整体用 default/ 的时间）
-   ├─ cover.png        列表封面（可选；缺失时由卡片 <img onerror> 降级到 default 封面）
+   ├─ cover.png        列表封面（可选；加载失败时由卡片 <img> 逐级降级：本篇 cover.png → default 封面）
    └─ cover.txt        封面外链（可选，一行 http(s) 地址；写了就优先用它，**default/ 不参与**）
 ```
-
-#### 封面外链 `info/cover.txt`（可选机制）
-
-- 文件里写**一行 `http(s)` 绝对地址**即可把这张外链图当封面。`pickCoverLink()` 会跳过空行与 `#` 开头的注释行、去掉首尾空格；第一行不合规就接着看下一行；一行可用外链都没有就**回落到约定路径的 `cover.png`**。只认带协议的绝对地址——`www.example.com/a.png` 这种缺协议的会被判为格式错误。
-- **`default/` 不参与**：该目录即使放了 `cover.txt` 也会被忽略（源码里由 `if (folder !== DEFAULT_FOLDER)` 守卫）。
-- **不做链接有效性探测**（探测要整张下载图片，浪费流量）。有效性交给卡片 `<img>` 的 `onerror` **逐级降级**：外链 → 本篇 `cover.png` → `default` 兜底封面。降级用阶段标记推进，**最多换两次**——否则两边都失败时会在 `cover.png` 与 `default` 之间来回跳。
-- **缓存语义**（这条最关键）：`cover.txt` 只在**文章需要重新加载时**读一次，读到的结果随文章一起写进缓存（就是 `cover` 字段）。所以**缓存命中时直接用缓存里的封面，不会再读 `cover.txt`、更不会去加载链接**；只有文章过期（`time.txt` 的最新编辑时间变了）触发重载时，才会重读 `cover.txt` 并采用新链接。换句话说：**改了 `cover.txt` 必须同时更新 `info/time.txt`，封面才会刷新**。
-- 外链地址**原样使用、不追加 `?v=`**（带签名的图床加了参数可能失效）；本地 `cover.png` 那条路仍然带 `?v=最新编辑时间`。
 
 `default/` 兜底目录（同样遵循上面的结构，tag.txt 只有前两行——后面的行留空，这样缺作者/主题的文章不会被塞进假数据）：
 
@@ -206,6 +225,14 @@ default/
 - **按时间排序依据 `latest`**（最新编辑时间），不是撰写时间。
 - 缓存校验也以 `latest` 为唯一依据（见下方加载流水线）。
 - 封面 URL 会带上 `?v=<latest>`：文章一更新，URL 就变，浏览器必定重新取图——这就是"重载文章时封面一起刷新"的实现方式。
+
+#### 封面外链 `info/cover.txt`（可选机制）
+
+- 文件里写**一行 `http(s)` 绝对地址**即可把这张外链图当封面。`pickCoverLink()` 会跳过空行与 `#` 开头的注释行、去掉首尾空格；第一行不合规就接着看下一行；一行可用外链都没有就**回落到约定路径的 `cover.png`**。只认带协议的绝对地址——`www.example.com/a.png` 这种缺协议的会被判为格式错误。
+- **`default/` 不参与**：该目录即使放了 `cover.txt` 也会被忽略（源码里由 `if (folder !== DEFAULT_FOLDER)` 守卫）。
+- **不做链接有效性探测**（探测要整张下载图片，浪费流量）。有效性交给卡片 `<img>` 的 `onerror` **逐级降级**：外链 → 本篇 `cover.png` → `default` 兜底封面。降级用阶段标记推进，**最多换两次**——否则两边都失败时会在 `cover.png` 与 `default` 之间来回跳。
+- **缓存语义**（这条最关键）：`cover.txt` 只在**文章需要重新加载时**读一次，读到的结果随文章一起写进缓存（就是 `cover` 字段）。所以**缓存命中时直接用缓存里的封面，不会再读 `cover.txt`、更不会去加载链接**；只有文章过期（`time.txt` 的最新编辑时间变了）触发重载时，才会重读 `cover.txt` 并采用新链接。换句话说：**改了 `cover.txt` 必须同时更新 `info/time.txt`，封面才会刷新**。
+- 外链地址**原样使用、不追加 `?v=`**（带签名的图床加了参数可能失效）；本地 `cover.png` 那条路仍然带 `?v=最新编辑时间`。
 
 #### 加载流水线（`ensureLoaded()`）
 
@@ -259,13 +286,15 @@ loadArticles(needLoad)：有界并发（CONCURRENCY = 4）逐篇 loadArticle()
   - `.read-fab.visible` —— 只看"是否处于阅读视图"（阅读容器可见 **且** 博客标签激活）。**导航按钮要常驻，所以不能跟着滚动位置忽隐忽现**；
   - `.read-fab-extra.hidden-extra` —— 才看"文章标题是否已滚出视口上方（`#blogReadTitle` 的 `getBoundingClientRect().bottom < 0`）"，只有这两枚按钮受滚动影响；
   - `#fabNav.is-hidden` —— 不在阅读视图、或导航已展开时淡出，并且**把 `max-height` 与 `border-width` 一起收掉**（否则会在原位留一条边框细线），这样浮层会平滑滑到按钮原来的位置上，不会空出一格。
+  > 两个容易踩的样式细节：① `.read-fab-extra` 因为要做"高度归零"的收起动画必须带 `overflow: hidden`，所以要额外加 `padding-top: 3px` 给 `.read-fab-btn:hover` 的 `translateY(-2px)` 留余量——**不留就会把最上面那枚按钮的顶边裁掉一条**（收起的 `.hidden-extra` 里再把这份余量归零，免得留下空隙）；② 按钮**不设 `box-shadow`**，贴着内容区右下角时投影会显成"按钮下方一层灰"，立体感交给边框与悬停变色。
   滚动/尺寸变化用 `requestAnimationFrame` 合并更新；返回/回到顶部共用 `handleBackAction()` 与 `backToTop()`。
   > 为什么按钮不放在 `.blog-browse` 里：该容器带 `backdrop-filter`，会让 `position: fixed` 的包含块退化成它本身，按钮就不再相对视口固定了——所以浮动按钮必须挂在 `<body>` 下。同理，`.blog-back` 与浮动按钮的图标都改用 `background-color` + `background-image`，避免 `background` 简写把图标重置掉。
 - **文章导航浮层**（`#readNav`，放在按钮组内部，`right:0` + `bottom:100%` 所以是**朝左上展开**）：
   - `buildReadNav()` 在每次 `openArticle()` 后按正文里的 **h1 / h2** 重建目录——标题本身没有 id，这里统一补上 `read-heading-N`，目录项用 `data-target` 指过去；h2 缩进一级（`.lvl-2`）；**一个 h1/h2 都没有时显示「暂无标题」**。
+    > 这些 id 是**渲染时临时生成**的，别在正文里写 `#read-heading-3` 这类锚点链接——hash 路由会把 `#...` 当成站内路由处理，跳转会跑偏。
   - 点目录项 → `jumpToHeading()` → `scrollIntoView({behavior:'smooth', block:'start'})`；顶栏避让交给 CSS 的 `scroll-margin-top: 4.5rem`（手机上侧边栏是 sticky 顶栏）。跳转后浮层**保持展开**，由用户自己收起。
   - 浮层右上角是「收起导航」小按钮（`#readNavFold`，用 `foldnavi_*` 图标），点它回到「展开导航」状态；`aria-expanded` 随之同步。**展开期间「展开导航」按钮隐藏**，由这个收起按钮接手。
-  - **展开状态不做任何记忆**，且展开后会**自动收起**：① 用户一滚动页面就收起（滚动监听里 `isReadNavOpen()` 为真时立刻 `setReadNavOpen(false)`；浮层**内部**目录列表的滚动事件不冒泡到 window，所以翻目录不会误收）；② 停留满 3 秒自动收起（`READ_NAV_AUTO_CLOSE_MS`，每次展开重新计时，收起时清掉计时器）。换文章、返回列表、切走标签同样会收起。
+  - **展开状态不做任何记忆**，且展开后会**自动收起**（`READ_NAV_AUTO_CLOSE_MS = 3000`）：① 用户一滚动页面就立刻收起（滚动监听里 `isReadNavOpen()` 为真时调 `setReadNavOpen(false)`；浮层**内部**目录列表的滚动事件不冒泡到 window，所以翻目录不会误收）；② **鼠标指针不在浮层内、持续满 3 秒**才收起——指针进入浮层（含内部目录项，`pointerenter`/`pointerleave` 会考虑子元素）时 `clearReadNavTimer()` 暂停倒计时，离开后 `startReadNavIdleTimer()` 重新计满 3 秒；收起时会把 `readNavPointerInside` 标志一并清零，否则"指针在浮层里被滚动收起"之后，下次展开会因标志残留而**永不倒计时**。换文章、返回列表、切走标签同样会收起。
   - **动画**：浮层显隐**不用 `hidden` 属性**（那是 `display:none`，做不了过渡），改用 `.open` 类 + opacity/transform/visibility 过渡（收起时 `visibility` 延迟到过渡结束再切换，保证淡出能播完）；`.read-fab-extra` 收起时会连 `max-height` 一起动画，所以「返回/回到顶部」出现或消失时，导航按钮不会突然跳位。
   - **目录条的"腰斩"问题**（标题多、需要滚动时，滚出边界的那条只露出上半截字）：三处一起解决 —— ① `.read-nav-item` 加 `flex-shrink: 0`，防止 flex 列把条目压扁；② 滚动区 `.read-nav-list` 底部加渐隐 `mask-image`，越界的那条**淡出**而不是被硬切；③ `scroll-snap-type: y proximity` + 条目的 `scroll-snap-align: start`，停下时对齐到条目边界，再配一点 `padding-bottom` 留余量。
 
@@ -360,11 +389,11 @@ loadArticles(needLoad)：有界并发（CONCURRENCY = 4）逐篇 loadArticle()
 | 改每页条数 | `lib/js/blog.js` 的 `PER_PAGE`（当前 10） |
 | 改并发数（加载速度 vs 请求数） | `lib/js/blog.js` 的 `CONCURRENCY`（当前 4） |
 | 支持新的 Markdown 语法 | 行内标记加进 `lib/js/blog.js` 的 `patterns` 数组；块级语法在 `renderMarkdown()` 的主循环里加分支（表格就是照这个路子加的：`splitTableRow()` / `isTableDelimiter()` / `renderTable()`） |
-| 换壁纸来源 | `index.html` 的 `WALLPAPER_API`（随机入口）+ `resolveWallpaperRedirect()`（解析真实链接）+ `#bgLayer` 图层 |
-| 改「获取当前壁纸」的下载/兜底行为 | `index.html` 的 `saveCurrentWallpaper()`（状态提示在 `#bgStatus`）、`blobToPng()`（格式转换）、`setSaveMode()`（保存模式） |
+| 换壁纸来源 | `index.html` 的 `WALLPAPER_API`（随机入口，当前 `api.yppp.net/api.php`）+ `resolveWallpaperRedirect()`（解析真实链接）+ `#bgLayer` 图层。**换图床前先确认它带 `Access-Control-Allow-Origin`**，否则一键下载会失效 |
+| 改「获取当前壁纸」的下载行为 | `index.html` 的 `saveCurrentWallpaper()`（状态提示在 `#bgStatus`）与 `blobToPng()`（保存格式转换） |
 | 改历史版本 / 致谢内容 | `lib/words/historylist/*.txt`、`lib/words/thanks/致谢名单.txt`（纯文本，一行一条） |
 | 加一个新标签页 | 四处同步：`index.html` 侧边栏加 `.tab`（`data-tab="x"`）与 `<section id="tab-x">`、把 `#x` 加进 `VALID_TAGS`、在 `renderTab()` 里按需加载数据 |
-| 改版本号 / 记录本次更新 | `README.txt` + `lib/words/historylist/RELEASE版本.txt`（沿用 `REALEASE1.1.x更新内容：…` 写法） |
+| 改版本号 / 记录本次更新 | `README.txt` + `lib/words/historylist/RELEASE版本.txt`（沿用 `RELEASE1.2.x更新内容：…` 写法） |
 | 清掉本地缓存看真实效果 | 浏览器开发者工具 → Application → Local Storage（键名见第五节） |
 
 ---
@@ -446,7 +475,7 @@ node -e "const h=require('http'),f=require('fs'),p=require('path');h.createServe
 5. **放封面**：可选，`info/cover.png`。**推荐比例 4:5（0.8，略竖）**，例如 **400×500 px** 就够（卡片上最大只显示到约 80×99 px，2 倍屏也只要 160×198）；缺省时列表卡片会自动降级到 `default/info/cover.png`。也可以用 `info/cover.txt` 写一行外链地址来替代（见「封面外链」一节）。详见下面的「封面比例怎么定」。
 6. **跑脚本**：双击 `lib/words/blogs/update_info.bat`。它会按 `tag.txt` 第 5 行重命名文件夹（若与 id 不一致）并重建 `list.txt`（UTF-8 BOM、按 id 排序）。看到 `list.txt updated with N ID(s).` 即为成功。
 7. **本地确认**：起个静态服务器（见第七节）打开 `#blog`，确认新卡片出现（标题 + 第一位作者 + 最新编辑时间）、封面/描述正常、点进去正文渲染正确、作者与最新编辑时间在元信息行最右侧。
-8. **提交**：`git add` → `git commit` → `git push`；GitHub Pages 会自动发布，**无需任何构建**。顺手把本次改动写进 `lib/words/historylist/RELEASE版本.txt`（沿用 `REALEASE1.1.x更新内容：…` 写法）与 `README.txt` 的版本号。
+8. **提交**：`git add` → `git commit` → `git push`；GitHub Pages 会自动发布，**无需任何构建**。顺手把本次改动写进 `lib/words/historylist/RELEASE版本.txt`（沿用 `RELEASE1.2.x更新内容：…` 写法）与 `README.txt` 的版本号。
 
 **封面比例怎么定（按现有 CSS 推算）**
 
@@ -467,7 +496,8 @@ node -e "const h=require('http'),f=require('fs'),p=require('path');h.createServe
 - `tag.txt` 第 5 行改了却没跑脚本 → `blog.js` 按 `list.txt` 里的旧名字拼路径 → 封面与正文双双 404（正文会落到 `default/passage.md` 的"内容缺失"提示）。
 - `tag.txt` 少写一行 → 后面的字段会**整体上移**（第 3 行的主题被当成作者等），因此缺行要留空行占位，不要直接省略。
 - **`tag.txt` 必须凑满 5 行**（`update_info.bat` 的判断是 `$lines.Count -ge 5`）：只有前 4 行时脚本不会改名（保持文件夹名），但 `blog.js` 会用文件夹名生成 `post_xxx` 作为文章 id，导致它与 `list.txt` 里的条目**对不上**——后果是缓存比对恒判定"有新文章"，**每次打开博客都会全量重取正文**（功能正常，只是白费流量）。
-- **改完文章忘了更新 `info/time.txt` 的最后一行** → 缓存认为这篇没变，读者看到的仍是旧内容。这是"更新后不刷新"的头号原因。
+- **改完文章忘了更新 `info/time.txt` 的最后一行** → 缓存认为这篇没变，读者看到的仍是旧内容。这是"更新后不刷新"的头号原因。**换封面外链（`cover.txt`）同理**：它只在文章重载时才被读取，不更新 `time.txt` 就换不掉封面。
+- **`cover.txt` 里写了外链却仍显示 `cover.png`** → 先确认链接是**带协议的绝对地址**（`www.` 开头会被判为格式错误而回落），再看图床是否允许跨域/防盗链（那是图片本身加载失败，卡片会逐级降级到 `cover.png`）。
 - **同一天里改了两次、日期却没变**（`YYYYMMDD` 精度只到天）→ 上面的判断同样认为"没变"。目前**没有**绕过办法，因为契约里判新旧只看这个日期；实在要让已缓存的读者看到新版，只能：让读者清一次站点数据，或作者在控制台执行 `window.BlogModule.refresh()` 强制重取。
 - `time.txt` 必须是 `YYYYMMDD`（8 位数字）。写成 `2026年9月28日` 会被判为非法时间：排序时按 0 处理（排到最前），并且每次打开都会因 `latest` 对不上而重取这篇。
 - 更新后 `list.txt` 会被脚本重写为**按 id 排序**，手工维护的顺序会被覆盖。

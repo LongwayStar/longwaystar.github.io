@@ -1,6 +1,6 @@
 @echo off
 rem ============================================================
-rem  LongWeb Blog Info Updater
+rem  LongwaySite Blog Info Updater
 rem  1) Renames each article folder to its metadata ID
 rem     (read from info\tag.txt line 5)
 rem  2) Rebuilds list.txt with article IDs

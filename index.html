@@ -73,15 +73,11 @@
     <title>LongwaySite</title>
 </head>
 <body>
-    <!-- 壁纸图层：用 <img> 而不是 CSS 背景，这样"图片另存为"才能拿到屏幕上这张原图。
-        默认 src 让它随页面解析立刻开始加载，避免首屏空一块 -->
-    <img class="bg-layer" id="bgLayer" src="https://t.alcy.cc/ycy" alt="" aria-hidden="true" />
-
-    <!-- 「保存模式」提示条（图床不给 CORS、无法脚本下载时显示） -->
-    <div class="bg-save-hint" id="bgSaveHint" hidden>
-        <span>该图床不允许网页直接读取图片数据 —— 请在图片上<strong>右键 →「图片另存为」</strong>（手机：长按图片 →「存储图像」）</span>
-        <button type="button" id="bgSaveHintClose">完成</button>
-    </div>
+    <!-- 壁纸背景图层：用 background-image 铺满视口（不是 <img>）。
+         背景图层不会被选中/拖动，也不会在加载失败时露出破图占位；
+         这里特意不给默认图，交给 JS 解析出真实固定链接后一次铺上，
+         免得先下一张随机图、再换成另一张（白费好几 MB 流量） -->
+    <div class="bg-layer" id="bgLayer" aria-hidden="true"></div>
 
     <div class="layout" id="layout">
         <button class="sidebar-toggle" id="sidebarToggle" aria-label="收起或展开侧边栏" title="收起/展开"></button>
@@ -95,7 +91,7 @@
                 <button class="tab" id="tabBtn-settings" role="tab" aria-selected="false" data-tab="settings">设置与相关</button>
             </div>
             <button class="refresh-bg" id="refreshBg" aria-label="刷新背景" title="刷新背景">
-                <span class="icon" id="refreshIcon">🔄</span>
+                <span class="icon">🔄</span>
                 <span id="refreshLabel">刷新背景</span>
             </button>
             <button class="theme-toggle" id="themeToggle" aria-label="切换暗色/亮色模式">
@@ -406,37 +402,35 @@
             updateThemeUI();
 
             /* ===== 刷新壁纸 / 获取当前壁纸 =====
-               t.alcy.cc/ycy 是"随机壁纸"入口：**每次请求都会跳到另一张图**。
+               api.yppp.net/api.php 是"随机壁纸"入口：**每次请求都会跳到另一张图**
+               （跳转链 api.php → 302 pc.php → 302 list.yppp.net/d/image/<hash>）。
                所以绝不能拿它本身当壁纸地址——那样每次渲染背景、每次下载都会
-               变成另一张图（这正是上一版"获取当前壁纸"对不上的根因：
+               变成另一张图（这正是更早一版"获取当前壁纸"对不上的根因：
                img.currentSrc 拿到的其实是原始 URL，而不是重定向后的地址）。
                正确做法：先跟随重定向解析出**真实固定链接**，再用真实链接设背景。
 
-               ⚠️ 线上实测：t.alcy.cc **不返回任何 CORS 头**（ACAO 为 null），
-               所以浏览器端 fetch 读它的字节一定会被拦下 —— 脚本"一键下载"
-               在该图床上根本不可能。因此壁纸改用 <img> 图层显示，
-               拿不到字节时退回"保存模式"，让用户右键/长按存下**屏幕上那张原图**
-               （不需要任何第三方代理，也绝不会给错图）。 */
-            const WALLPAPER_API = 'https://t.alcy.cc/ycy';
+               ✅ 线上实测：该 API 整条跳转链都带 Access-Control-Allow-Origin: *
+               （连中间那两个 302 都有），所以浏览器端 fetch 能读到字节 ——
+               "一键下载"这条主路可行（换掉的老图床 t.alcy.cc 就是缺这个头才失败的）。
+               万一将来又遇到不发 CORS 的图床：读不到字节就没法给出与屏幕一致的文件，
+               此时只如实提示，绝不给错图。 */
+            const WALLPAPER_API = 'https://api.yppp.net/api.php';
             const body = document.body;
             const bgLayer = document.getElementById('bgLayer');
-            const bgSaveHint = document.getElementById('bgSaveHint');
-            // 当前壁纸状态：url = 喂给 <img> 的地址；resolved = 该地址是否就是屏幕上那张图；
+            // 当前壁纸状态：url = 铺在背景图层上的地址；resolved = 该地址是否就是屏幕上那张图；
             // blob = 直接取下来的图片数据（有它就不必再下载一次）
             let currentBg = { url: '', resolved: false, blob: null, blobUrl: '' };
-            // 进入"保存模式"：把壁纸提到最前 + 显示操作提示
-            function setSaveMode(on) {
-                if (bgLayer) bgLayer.classList.toggle('saving', !!on);
-                if (bgSaveHint) bgSaveHint.hidden = !on;
-            }
+            const layerEl = bgLayer || body;   // 图层缺失时退化为直接铺在 body 上
 
             function randomWallpaperUrl() {
                 return WALLPAPER_API + '?t=' + Date.now();
             }
-            // 把壁纸地址交给 <img> 图层（同一 URL 会命中预加载的缓存，不会二次随机）
+            // 把壁纸铺到**背景图层**上（用 background-image，不是 <img>：
+            // 背景图层不会被选中/拖动，也不会在加载失败时露出破图占位）。
+            // 调用前都会先 preloadImage，同一 URL 命中缓存，所以切换时不会白一下。
             function applyWallpaper(url) {
-                if (bgLayer) bgLayer.src = url;
-                else body.style.backgroundImage = 'url("' + url + '")';   // 极端兜底
+                if (!url) return;
+                layerEl.style.backgroundImage = "url('" + String(url).replace(/'/g, '%27') + "')";
             }
             // 预加载（跨域无需 CORS）：让切换背景时不会先白一下
             function preloadImage(url) {
@@ -472,7 +466,6 @@
             // 刷新壁纸：① 解析真实链接 → ② 解析不到就取成 blob（也是稳定的同一张）
             // → ③ 都失败才退回"直接用随机入口"（能显示，但脚本读不到字节）
             async function refreshBackground() {
-                setSaveMode(false);   // 换图时退出保存模式，免得照旧图存
                 if (currentBg.blobUrl) {
                     try { URL.revokeObjectURL(currentBg.blobUrl); } catch (e) { /* 忽略 */ }
                 }
@@ -492,9 +485,9 @@
                         const objUrl = URL.createObjectURL(blob);
                         currentBg = { url: objUrl, resolved: true, blob: blob, blobUrl: objUrl };
                     } catch (e) {
-                        // 图床没开放跨域（t.alcy.cc 的实际情况）：
-                        // 仍用同一个随机地址喂给 <img>（同 URL 命中预加载缓存，
-                        // 所以屏幕上这张与预加载的是同一张），但脚本读不到它的字节
+                        // 万一图床没开放跨域（老图床 t.alcy.cc 就是这样）：
+                        // 仍用同一个随机地址当背景（同 URL 命中预加载缓存，所以屏幕这张
+                        // 就是预加载那张），但脚本读不到它的字节，之后无法保存
                         currentBg.url = await preloadImage(reqUrl);
                         currentBg.resolved = false;
                     }
@@ -549,19 +542,17 @@
 
             /* 获取当前壁纸：把屏幕上正在显示的那张图存下来。
                resolved 为真（拿到了字节或真实固定链接）→ 走脚本一键下载；
-               读不到字节（t.alcy.cc 不发 CORS 头，这是线上常态）→ **进入保存模式**：
-               把壁纸提到最前，让用户右键/长按存下屏幕上那张原图。
-               无论哪条路，都绝不会给出一张"和屏幕不一样"的图片。
+               读不到字节（图床不发 CORS 头时的兜底，当前 API 不会走到这里）→
+               只如实说明，**绝不**给出一张"和屏幕不一样"的图片。
                能下载时保存格式统一为 PNG（转换失败则按原格式保存并说明） */
             async function saveCurrentWallpaper() {
                 if (!currentBg.url) {
                     setBgStatus('正在获取壁纸…');
                     await refreshBackground();
                 }
-                // ---- 拿不到字节：走"保存模式"（无需第三方代理，也绝不换图）----
+                // ---- 拿不到字节：无法保证与屏幕一致，如实说明而不换图 ----
                 if (!currentBg.resolved) {
-                    setSaveMode(true);
-                    setBgStatus('图床未开放跨域读取，已进入「保存模式」：右键图片 →「图片另存为」（手机长按图片 →「存储图像」）');
+                    setBgStatus('图床未开放跨域读取（浏览器安全策略），无法取出与屏幕一致的原图；点「刷新背景」可再试一次');
                     return;
                 }
                 const now = new Date();
@@ -603,7 +594,7 @@
                     const opened = window.open(currentBg.url, '_blank', 'noopener');
                     setBgStatus(opened
                         ? '该图片不允许直接下载，已在新标签页打开 —— 右键「图片另存为」即可保存'
-                        : '该图片不允许直接下载，可点「获取当前壁纸」进入保存模式后右键另存');
+                        : '该图片不允许直接下载，请允许弹出窗口后重试');
                 }
             }
 
@@ -616,15 +607,6 @@
             });
             const saveBgBtn = document.getElementById('settingsSaveBg');
             if (saveBgBtn) saveBgBtn.addEventListener('click', saveCurrentWallpaper);
-            // 保存模式：点「完成」或直接点图片收起
-            const bgSaveHintClose = document.getElementById('bgSaveHintClose');
-            if (bgSaveHintClose) bgSaveHintClose.addEventListener('click', function() { setSaveMode(false); });
-            if (bgLayer) bgLayer.addEventListener('click', function() {
-                if (bgLayer.classList.contains('saving')) setSaveMode(false);
-            });
-            document.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape') setSaveMode(false);
-            });
 
             // 页面加载后：主动解析一次壁纸（把随机入口换成真实固定链接）
             (function initBackground() {
@@ -705,8 +687,10 @@
             showTab(initialTag, isPostHash ? 'none' : 'replace');
 
             /* ===== 历史版本数据懒加载（缓存 + 静默更新） ===== */
-            // 通用：先渲染缓存内容（若有），再网络拉取更新缓存与界面
-            function renderLinesTo(container, lines, emptyText, errText) {
+            // 通用：先渲染缓存内容（若有），再网络拉取更新缓存与界面。
+            // emptyText 同时用于"暂无记录"与调用方传入的错误文案
+            //（网络错误的提示由各调用方自行拼好后传进来）
+            function renderLinesTo(container, lines, emptyText) {
                 if (!container) return;
                 if (!lines || lines.length === 0) {
                     container.innerHTML = '<div class="error">' + (emptyText || '暂无记录') + '</div>';
@@ -806,7 +790,7 @@
             /* ===== 博客标题左下角实时时钟 ===== */
             const blogTimeEl = document.getElementById('blogTime');
             if (blogTimeEl) {
-                function pad2(n) { return (n < 10 ? '0' : '') + n; }
+                // pad2 用外层那个（本文件顶部已定义），这里不再重复声明
                 function updateBlogTime() {
                     const now = new Date();
                     blogTimeEl.textContent =

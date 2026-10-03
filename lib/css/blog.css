@@ -376,21 +376,6 @@
     opacity: 0.5;
     cursor: not-allowed;
 }
-.blog-filter .blog-reset-btn {
-    width: 100%;
-    padding: 0.45rem 0.5rem;
-    font-size: 0.85rem;
-    font-family: inherit;
-    color: #fff;
-    background: #e74c3c;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: filter 0.2s ease;
-}
-.blog-filter .blog-reset-btn:hover {
-    filter: brightness(1.1);
-}
 
 /* ---------- ④ 页面选择区（页面最下方，类百度分页） ---------- */
 .blog-pager {
@@ -464,8 +449,6 @@
     border-color: var(--cyan-500);
     box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3);
 }
-/* 返回箭头已改为按钮的 background-image（原来的 <img> 已移除），
-   因此不再需要 .blog-back img 规则 */
 
 /* ---------- 阅读视图浮动按钮 ----------
    布局：竖排「展开导航」（常驻） + 一组「返回 / 回到顶部」（标题滚出视口才出现）。
@@ -502,19 +485,24 @@
     transition: opacity 0.28s ease, transform 0.28s cubic-bezier(0.2, 0.7, 0.3, 1),
                 visibility 0s linear 0s;
 }
-/* 「返回 / 回到顶部」整组：随"标题是否可见"平滑收起/展开（高度也动画，避免跳位） */
+/* 「返回 / 回到顶部」整组：随"标题是否可见"平滑收起/展开（高度也动画，避免跳位）。
+   padding-top 是给 hover 的 translateY(-2px) 留的余量：收起动画需要 overflow:hidden，
+   若不留余量，最上面那枚按钮上移时会被裁掉一条边（修过的坑） */
 .read-fab-extra {
     display: flex;
     flex-direction: column;
     overflow: hidden;
     max-height: 200px;
     margin-top: 0.7rem;
+    padding-top: 3px;
     opacity: 1;
-    transition: max-height 0.3s ease, margin-top 0.3s ease, opacity 0.22s ease;
+    transition: max-height 0.3s ease, margin-top 0.3s ease,
+                padding-top 0.3s ease, opacity 0.22s ease;
 }
 .read-fab-extra.hidden-extra {
     max-height: 0;
     margin-top: 0;
+    padding-top: 0;
     opacity: 0;
     pointer-events: none;
 }
@@ -539,10 +527,11 @@
     border: 1px solid var(--border-color);
     backdrop-filter: blur(var(--bg-blur));
     -webkit-backdrop-filter: blur(var(--bg-blur));
-    box-shadow: var(--shadow);
+    /* 不加阴影：按钮贴着内容区右下角，投影会显成"按钮下方一层灰"
+       （需要立体感时靠边框与悬停变色即可） */
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
-    transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+    transition: transform 0.18s ease, border-color 0.18s ease;
 }
 #fabBack { background-image: var(--icon-back); }    /* 与阅读页右上角的返回图标同源 */
 #fabTop  { background-image: var(--icon-totop); }
@@ -699,7 +688,6 @@
 @media (hover: hover) {
     .read-fab-btn:hover {
         border-color: var(--cyan-500);
-        box-shadow: 0 6px 16px rgba(6, 182, 212, 0.3);
         transform: translateY(-2px);
     }
 }
@@ -750,9 +738,6 @@
     opacity: 0.85;
 }
 .blog-read-meta .meta-value {
-    color: var(--text-secondary);
-}
-.blog-read-byline .meta-value {
     color: var(--text-secondary);
 }
 /* 有编辑记录时给点可悬停的暗示 */

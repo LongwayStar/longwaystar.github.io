@@ -18,12 +18,7 @@
     --cyan-500: #06B6D4;
     --cyan-300: #67E8F9;
     --cyan-200: #A5F3FC;
-    --cyan-100: #CFFAFE;
     --cyan-50: #ECFEFF;
-    --accent-light: #CFFAFE;
-    --accent-dark: #06B6D4;
-    --btn-bg: #06B6D4;
-    --btn-text: #fff;
     --footer-color: #4a5a6a;
     /* ---- 图标资源（随主题自动切换） ----
        命名约定：文件名里的 light / dark 指**图标自身的颜色**，不是主题名。
@@ -43,10 +38,6 @@
     --text-secondary: #c0d0e0;
     --shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
     --border-color: rgba(103, 232, 249, 0.3);
-    --accent-light: #1a3a44;
-    --accent-dark: #67E8F9;
-    --btn-bg: #67E8F9;
-    --btn-text: #0a1a22;
     --footer-color: #8aa0b0;
     /* 深色背景 → 换用浅色图标（见 :root 中的命名约定） */
     --icon-nav: url('../icons/lablesbar_light.png');
@@ -62,9 +53,8 @@
 }
 body {
     background-color: var(--bg-body);
-    /* 壁纸不再用 CSS 背景：CSS 背景图无法被"图片另存为"保存。
-       改用 body 下的 <img id="bgLayer"> 图层（见 .bg-layer），
-       右键 / 长按就能存下屏幕上那张原图 */
+    /* 壁纸由 body 下的独立背景图层负责（见下方 .bg-layer），
+       body 自己只留纯色底 —— 图层加载失败时就是这个颜色兜着 */
     color: var(--text-primary);
     font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
     min-height: 100vh;
@@ -77,61 +67,25 @@ body {
     line-height: 1.6;
 }
 
-/* ---------- 壁纸图层 ---------- */
+/* ---------- 壁纸背景图层 ----------
+   一个铺满视口的纯背景层（background-image），不是 <img>：
+   背景不会被选中/拖动，也永远不会露出破图占位；加载失败时它只是不显示，
+   底下 body 的 --bg-body 纯色兜着。
+   pointer-events: none 让它彻底当"装饰"：空白处的点击、从空白处起手的
+   文本选择都正常落到页面本身，不会被这一层截走。
+   （旧版是 <img> 图层、要给右键另存留出命中区，所以那时**不能**设它。） */
 .bg-layer {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    object-fit: cover;
-    object-position: center;
-    z-index: -1;              /* 垫在所有内容后面 */
+    z-index: -1;                 /* 垫在所有内容后面 */
     background-color: var(--bg-body);
-    /* 注意：不能设 pointer-events: none —— 那样就没法右键保存了。
-       它在最底层，内容区的点击仍然由上方元素接住 */
-}
-/* 「保存模式」：把壁纸提到最前面，方便右键/长按另存 */
-.bg-layer.saving {
-    z-index: 99999;
-    cursor: zoom-out;
-}
-.bg-save-hint {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    z-index: 100000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 1rem;
-    flex-wrap: wrap;
-    padding: 0.7rem 1rem;
-    background: var(--bg-glass);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border-bottom: 1px solid var(--border-color);
-    box-shadow: var(--shadow);
-    font-size: 0.9rem;
-    color: var(--text-secondary);
-    text-align: center;
-}
-.bg-save-hint[hidden] {
-    display: none;
-}
-.bg-save-hint button {
-    padding: 0.3rem 1rem;
-    font-family: inherit;
-    font-size: 0.85rem;
-    color: #fff;
-    background: var(--cyan-500);
-    border: none;
-    border-radius: 999px;
-    cursor: pointer;
-}
-.bg-save-hint button:hover {
-    filter: brightness(1.08);
+    background-repeat: no-repeat;
+    background-position: center center;
+    background-size: cover;
+    pointer-events: none;
 }
 
 /* ---------- 主体两栏布局：左侧贴合边栏 + 右侧内容 ---------- */
@@ -296,9 +250,6 @@ body {
     color: var(--text-primary);
     padding-left: 1.4rem;
 }
-[data-theme="dark"] .sidebar .theme-toggle:hover {
-    color: var(--text-primary);
-}
 .sidebar .theme-toggle .icon {
     font-size: 1rem;
     line-height: 1;
@@ -330,9 +281,6 @@ body {
     background: rgba(6, 182, 212, 0.08);
     color: var(--text-primary);
     padding-left: 1.4rem;
-}
-[data-theme="dark"] .sidebar .refresh-bg:hover {
-    color: var(--text-primary);
 }
 .sidebar .refresh-bg .icon {
     font-size: 1rem;
@@ -465,11 +413,6 @@ body {
 .infocard {
   width: 80%;           /* 示例：section 宽度可随视口变化 */
   max-width: 500px;
-}
-.infocard img {
-  display: block;       /* 清除图片下方的空隙 */
-  max-width: 100%;      /* 图片最大宽度不超过 section */
-  height: auto;         /* 高度按比例自动调整 */
 }
 
 /* 历史版本面板内卡片使用列居中布局 */
@@ -606,9 +549,6 @@ body {
     .main {
         padding: 1rem 1rem 1rem 1.25rem;
     }
-    .layout.collapsed .main {
-        margin-left: 0;
-    }
 }
 
 /* 手机横屏 / 大手机：边栏变顶栏 */
@@ -648,8 +588,7 @@ body {
         text-align: center;
     }
     .sidebar .tab:hover {
-        transform: none;
-        padding-left: 0.7rem;
+        padding-left: 0.7rem;   /* 顶部横排时不做桌面那种"缩进让位"动效 */
     }
     .sidebar .tab::before {
         top: auto;
