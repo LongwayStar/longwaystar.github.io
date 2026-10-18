@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex" />
+    <title>404 NOT FOUND - LongwaySite</title>
+    <script>
+        /* GitHub Pages 对"不存在的路径"会返回本站根目录的 404.html。
+           这个文件只做一件事：把访客送到单页应用里的 404 页面（hash = #404）——
+           否则站内的 .otf 字体、独立背景、倾斜标题这些都没法用上。
+           注意 hash 路由的兜底（index.html 里）负责"hash 不存在"那一半，
+           这里负责"路径不存在"那一半。 */
+        (function () {
+            // 先按站点已保存的主题偏好落一次色，避免跳转瞬间闪白
+            try {
+                var saved = localStorage.getItem('theme');
+                var dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                document.documentElement.setAttribute('data-theme',
+                    (saved === 'light' || saved === 'dark') ? saved : (dark ? 'dark' : 'light'));
+            } catch (e) { /* localStorage 不可用时忽略 */ }
+            // 用 replace：别把"错误页"留在浏览器历史里
+            location.replace('/#404' + (location.search || ''));
+        })();
+    </script>
+</head>
+<body>
+    <p style="margin:2rem;font-family:system-ui,sans-serif;">
+        页面不存在。如果浏览器没有自动跳转，请<a href="/#404">点这里返回站点</a>。
+    </p>
+</body>
+</html>

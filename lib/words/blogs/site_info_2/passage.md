@@ -7,7 +7,7 @@
 | 部署 | GitHub Pages，`main` 分支根目录，域名 `longwaystar.github.io` |
 | 代码规模 | `index.html` 811 行 · `lib/js/blog.js` 1704 行 · 两份 CSS 共 1793 行 |
 
-**本文覆盖面**：目录结构 → 页面架构与路由 → 七个功能模块的实现方式（主题 / 侧边栏 / 背景 / 历史与致谢 / 博客核心 / 维护脚本 / 子站点）→ 状态与缓存键 → 改动入口速查表 → 本地预览 → 验证方法 → 附录（新增文章的完整步骤、一句话总览）。
+**本文覆盖面**：目录结构 → 页面架构与路由 → 八个功能模块的实现方式（主题 / 侧边栏 / 背景 / 历史与致谢 / 博客核心 / 维护脚本 / 子站点 / 404 页）→ 状态与缓存键 → 改动入口速查表 → 本地预览 → 验证方法 → 附录（新增文章的完整步骤、一句话总览）。
 
 **阅读建议**：想改内容看 §4.5 的数据契约与附录 A；想改样式看两份 CSS 的变量（§六 速查表）；想改行为看 §4.5 与 `blog.js`；**只想知道"这是什么"看附录 B**。
 
@@ -46,7 +46,8 @@ longwaystar.github.io/
 │  │  ├─ totop_light|dark.png               ← 回到顶部
 │  │  └─ unfoldnavi_light|dark.png          ← 展开导航
 │  │     foldnavi_light|dark.png            ← 收起导航
-│  ├─ images/ fonts/           ← 预留空目录（仅 readme.txt 占位，当前未使用）
+│  ├─ images/404page/          ← 404 页素材：01.jpg（本地图）+ 01.txt（图床地址，优先用）
+│  ├─ fonts/余繁离形体.otf      ← 404 页标题用的字体
 │  └─ words/                   ← 全部"内容数据"
 │     ├─ blogs/                ← 博客数据区
 │     │  ├─ list.txt           ← 文章清单（UTF-8 带 BOM；每行一个文章文件夹名 = 文章 id）
@@ -73,7 +74,7 @@ longwaystar.github.io/
 
 ### 3.1 单页 + 侧边栏标签
 
-`index.html` 是唯一页面，内部用「一个侧边栏 + 五个面板」的结构：
+`index.html` 是唯一页面，内部用「一个侧边栏 + 六个面板」的结构（五个侧边栏标签 + 一个不占标签位置的 404 页）：
 
 | 标签 | 面板 id | 触发时加载的数据 |
 |---|---|---|
@@ -82,13 +83,17 @@ longwaystar.github.io/
 | 空白页面 | `#tab-empty` | 无（预留） |
 | 历史版本 | `#tab-history` | `loadHistory()` → 2 个 txt（懒加载 + 缓存） |
 | 设置与相关 | `#tab-settings` | `loadThanks()` → 致谢名单 txt（懒加载 + 缓存） |
+| （无标签）404 | `#tab-404` | 切独立背景（txt 里的图床地址 → 失败退本地图） |
 
 切换逻辑集中在 `index.html` 的 `renderTab(name)`（只切 DOM 与按需加载，**不写 URL**）与 `showTab(name, mode)`（负责历史记录语义）。`showTab` 通过 `window.AppShowTab` 暴露给 `blog.js` 复用，避免重复绑定。
 
+> 404 面板没有对应的侧边栏按钮，所以 `renderTab()` 里对它做了特判（否则"没有命中任何标签"会被当成未知标签退回主页），并且切到它时会把 `body` 加上 `nf-mode` 来显形独立背景。
+
 ### 3.2 hash 路由与浏览器历史
 
-- 标签级：`#home` / `#blog` / `#empty` / `#history` / `#settings`
+- 标签级：`#home` / `#blog` / `#empty` / `#history` / `#settings` / **`#404`**
 - 文章级：`#blog/post/<文章 id>`（收藏夹可直达、可分享）
+- **兜底**：既不是合法标签、也不是合法文章的 hash 一律落到 `#404`（用 `replace` 落定地址，不往历史里塞错误页）。
 
 **导航层**（`index.html` 的 `window.AppNav`）：
 
@@ -350,6 +355,37 @@ loadArticles(needLoad)：有界并发（CONCURRENCY = 4）逐篇 loadArticle()
 - `testground/`：内容为 `<h1>Hello World!<h1/>` 的空白测试页（新窗口打开）。
 - 两者独立、无共享代码，可随时删除而不影响主站（历史上曾删除过 `newlook/`）。
 
+### 4.8 404 页面（`#404`）
+
+**什么时候会看到它**：地址栏 hash 既不是合法标签、也不是合法文章时（`#no-such-page`、`#blog/post/<不存在的 id>`），以及从首页「关于其他页面」卡片点「404 页面」进来时。侧边栏与页脚照常保留——它就是一个普通的 `tab-panel`，只是**没有**侧边栏按钮。
+
+**独立背景**（`#nfBg`，挂在 `<body>` 下，`body.nf-mode` 时显形并盖在壁纸图层之上）：
+
+| 顺序 | 来源 | 说明 |
+|---|---|---|
+| ① | `lib/images/404page/01.txt` 里的一行 `http(s)` 地址 | `ensureNotFoundBackground()` 先读它，再用 `probeImage()` 预加载验证 |
+| ② | `lib/images/404page/01.jpg` | 上一步没有地址 / 加载失败（含 8 秒超时）时退回本地图 |
+
+- 结果记在 `nfBg.dataset.source`（`host` / `local`）并置 `dataset.loaded='1'`，**重复进入 404 不会反复探测**（失败也只会退到本地图，页面不会卡住）。
+- 独立背景层不放进 `#tab-404` 内部，是为了避免祖先的 stacking context 把 `z-index: -1` 吃掉。
+
+**巨大的倾斜标题**（`#nfText`）：
+
+- 字体走 `@font-face` 的 `YuFanLiXing`（`lib/fonts/余繁离形体.otf`，`font-display: swap`），缺字时回退系统无衬线；字号 `clamp(2.6rem, 13vw, 11rem)`，窄屏允许换行。
+- 样式近未来风：**半透明白**（`rgba(236,246,255,.72)`）+ 双层 `text-shadow`（暗投影 + 青色辉光）。
+- **跟随指针倾斜**：舞台 `.nf-stage` 提供 `perspective: 900px`，`pointermove` / `pointerdown` 时按指针相对舞台中心的归一化偏移写入 `rotateY(±22°)` / `rotateX(±12°)`——左右摆幅大、上下做明显的俯仰；指针在右则右缘朝观察者（`rotateY` 取负），指针在下则底缘朝观察者；`pointerleave` / `pointercancel` 复位。鼠标与手指走同一套 `pointer*` 事件，所以触屏也能玩。幅度常量在 `bindNotFoundTilt()` 的 `MAX_Y`（左右，22）/ `MAX_X`（上下，12）里。
+  > 文字设了 `pointer-events: none`：它只是装饰，不能挡住指针移动（否则 `pointermove` 会断断续续）。`prefers-reduced-motion` 下关掉变换过渡。
+
+**说明卡片**（`#nfCard`，在巨大文字与「回到主页」按钮之间）：
+
+- 内容文件：`lib/words/404sents/content.md`，由 `BlogModule.renderCardMarkdown()` 渲染后塞进卡片；文件缺失或为空时**整张卡片不出现**。
+- **高透明**：背景只 `rgba(255,255,255,.03)`（边框 `rgba(255,255,255,.12)`）+ `backdrop-filter: blur(4px) saturate(120%)`——只做轻微柔化，几乎只剩一层薄描边，背景图基本透得出来；**文字有高光**（两层 `text-shadow`：暗描边压亮背景 + 青色微光提亮），保证压在照片上也读得清。
+- 时序：直接访问 `#404` 时 `blog.js` 可能还没执行完，`ensureNotFoundCard()` 会**等渲染器就绪**（每 100ms 重试，最多约 2 秒，期间不显示），避免把 Markdown 原文（`##`、`**` 之类）露在卡片里；实在等不到才退化为"去掉行首 `#` 标记的纯文本"。
+
+**「回到主页」按钮**：`#nfHomeBtn` → `showTab('home', 'push')`。首页入口是卡片里的 `<a href="#404" id="homeLink404">`（保留真链接，中键/Ctrl 可开新标签），点击时 `preventDefault` 走 `showTab('404','push')`。
+
+**卡片内容的 Markdown 渲染器**：`BlogModule.renderCardMarkdown(text)` —— 只走**行内**语法（粗体/斜体/删除线/行内代码/链接），**行首标题标记（`#` ~ `######`）降级成强调行** `<strong class="card-md-h">`（不产生块级结构），先转义 HTML 再解析，单个换行渲染成 `<br />`；相对路径按站点根解析（传空 folder）。**404 说明卡片已启用**；主页卡片与历史版本列表留待以后按同样方式接入。
+
 ---
 
 ## 五、状态与缓存键一览
@@ -394,6 +430,8 @@ loadArticles(needLoad)：有界并发（CONCURRENCY = 4）逐篇 loadArticle()
 | 改历史版本 / 致谢内容 | `lib/words/historylist/*.txt`、`lib/words/thanks/致谢名单.txt`（纯文本，一行一条） |
 | 加一个新标签页 | 四处同步：`index.html` 侧边栏加 `.tab`（`data-tab="x"`）与 `<section id="tab-x">`、把 `#x` 加进 `VALID_TAGS`、在 `renderTab()` 里按需加载数据 |
 | 改版本号 / 记录本次更新 | `README.txt` + `lib/words/historylist/RELEASE版本.txt`（沿用 `RELEASE1.2.x更新内容：…` 写法） |
+| 改 404 页（背景、文案、倾斜幅度、字体、说明卡片） | 背景与优先级：`index.html` 的 `ensureNotFoundBackground()` + `lib/images/404page/`；倾斜幅度：`bindNotFoundTilt()` 的 `MAX_Y`（左右）/ `MAX_X`（上下）；说明卡片：`ensureNotFoundCard()` + `lib/words/404sents/content.md`；外观与字体：`generalstyle.css` 的 `@font-face` 与 `.nf-*` |
+| 让某处卡片改用 .md 内容 | `BlogModule.renderCardMarkdown(text)`（行内语法 + 标题降级 + `<br />`，先转义再解析）；`el.innerHTML = BlogModule.renderCardMarkdown(txt)` 即可（404 说明卡片就是这么用的） |
 | 清掉本地缓存看真实效果 | 浏览器开发者工具 → Application → Local Storage（键名见第五节） |
 
 ---

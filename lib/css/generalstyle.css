@@ -312,8 +312,7 @@ body {
 .tab-panel {
     display: none;
     animation: fadeIn 0.3s ease;
-}
-.tab-panel.active {
+}.tab-panel.active {
     display: flex;
     flex-direction: column;
     gap: 2rem;
@@ -730,4 +729,164 @@ body {
     line-height: 2;
     width: 100%;
     max-width: 480px;
+}
+
+/* ============================================================
+   404 页面（#404）
+   构图：独立背景层 + 居中巨大倾斜字 + 「回到主页」按钮。
+   侧边栏与页脚照常保留（本面板就是普通 tab-panel 之一）。
+   ============================================================ */
+
+/* 站点专用字体：余繁离形体（只有这一个文件，缺字时回退到系统无衬线） */
+@font-face {
+    font-family: 'YuFanLiXing';
+    src: url('../fonts/余繁离形体.otf') format('opentype');
+    font-display: swap;
+}
+
+/* 独立背景层：平时不可见，body.nf-mode 时盖在壁纸图层之上 */
+.nf-bg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;                  /* 与壁纸图层同层，靠 DOM 顺序盖在它上面 */
+    background-color: #06090d;    /* 图片没加载出来时的兜底底色 */
+    background-repeat: no-repeat;
+    background-position: center center;
+    background-size: cover;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.45s ease, visibility 0s linear 0.45s;
+}
+body.nf-mode .nf-bg {
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.45s ease, visibility 0s linear 0s;
+}
+
+/* 舞台：撑满可视区并居中内容（留出顶栏/页脚的位置感） */
+.nf-stage {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(1.2rem, 4vw, 2.4rem);
+    min-height: calc(100vh - 4rem);
+    padding: 2rem 1rem;
+    /* 透视放在父级，子元素的 rotateX/rotateY 才有立体感 */
+    perspective: 900px;
+    user-select: none;
+}
+
+/* 巨大的「404 NOT FOUND」：半透明 + 双层阴影，跟随指针倾斜（transform 由 JS 写入） */
+.nf-text {
+    font-family: 'YuFanLiXing', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    font-size: clamp(2.6rem, 13vw, 11rem);
+    font-weight: 700;
+    line-height: 1.05;
+    letter-spacing: 0.04em;
+    text-align: center;
+    white-space: nowrap;
+    /* 近未来风：不算实的白 + 青色辉光；半透明让背景透出来 */
+    color: rgba(236, 246, 255, 0.72);
+    text-shadow:
+        0 0.03em 0.06em rgba(0, 0, 0, 0.55),
+        0 0.12em 0.38em rgba(0, 0, 0, 0.55),
+        0 0 0.9em rgba(6, 182, 212, 0.35);
+    transform-style: preserve-3d;
+    transform: rotateY(0deg) rotateX(0deg);
+    transition: transform 0.18s ease-out;
+    will-change: transform;
+    pointer-events: none;         /* 文字只作装饰，别挡住指针移动 */
+}
+/* 触屏/低性能设备上减少动效开销 */
+@media (prefers-reduced-motion: reduce) {
+    .nf-text { transition: none; }
+}
+
+/* 说明卡片：**高透明**（尽量让背景图透出来）+ 文字高光（压在照片上也读得清）。
+   内容由 lib/words/404sents/content.md 渲染而来 */
+.nf-card {
+    max-width: min(38rem, 88vw);
+    padding: 1rem 1.5rem;
+    border-radius: 16px;
+    /* 高透明：alpha 压到很低，只留一层极薄的玻璃感（靠模糊与描边区分出层次） */
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    /* 模糊度调低：只留一点点柔化，让背景图轮廓透得更清楚
+       （alpha 已经很低，再重模糊反而会糊成一片） */
+    backdrop-filter: blur(2px) saturate(120%);
+    -webkit-backdrop-filter: blur(2px) saturate(120%);
+    color: rgba(240, 248, 255, 0.94);
+    font-size: clamp(0.95rem, 2.2vw, 1.15rem);
+    line-height: 1.85;
+    letter-spacing: 0.02em;
+    text-align: center;
+    /* 文字高光：暗描边压住亮背景 + 青色微光提亮 */
+    text-shadow:
+        0 1px 2px rgba(0, 0, 0, 0.8),
+        0 0 10px rgba(6, 182, 212, 0.4);
+}
+.nf-card[hidden] {
+    display: none;
+}
+/* 渲染器把 Markdown 标题降级成这个"强调行" */
+.nf-card .card-md-h {
+    display: block;
+    font-size: 1.12em;
+    font-weight: 700;
+    color: rgba(236, 254, 255, 0.98);
+    text-shadow:
+        0 1px 2px rgba(0, 0, 0, 0.85),
+        0 0 14px rgba(103, 232, 249, 0.5);
+}
+.nf-card a {
+    color: var(--cyan-300);
+    text-underline-offset: 0.2em;
+}
+.nf-card code {
+    padding: 0.1em 0.35em;
+    border-radius: 5px;
+    background: rgba(0, 0, 0, 0.35);
+    font-size: 0.92em;
+}
+
+/* 「回到主页」按钮 */.nf-home {
+    padding: 0.7rem 2.2rem;
+    font-family: inherit;
+    font-size: clamp(0.95rem, 2.2vw, 1.1rem);
+    letter-spacing: 0.08em;
+    color: #eafaff;
+    background: rgba(6, 182, 212, 0.18);
+    border: 1px solid var(--cyan-300);
+    border-radius: 999px;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    cursor: pointer;
+    transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+.nf-home:hover {
+    background: rgba(6, 182, 212, 0.32);
+    border-color: var(--cyan-500);
+    box-shadow: 0 0 24px rgba(6, 182, 212, 0.35);
+    transform: translateY(-2px);
+}
+.nf-home:active {
+    transform: translateY(0) scale(0.97);
+}
+.nf-home:focus-visible {
+    outline: 2px solid var(--cyan-300);
+    outline-offset: 3px;
+}
+
+/* 窄屏：文字允许换行，避免被裁 */
+@media (max-width: 600px) {
+    .nf-text {
+        white-space: normal;
+        font-size: clamp(2.2rem, 16vw, 5rem);
+        line-height: 1.15;
+    }
 }

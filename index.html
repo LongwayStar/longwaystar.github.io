@@ -79,6 +79,10 @@
          免得先下一张随机图、再换成另一张（白费好几 MB 流量） -->
     <div class="bg-layer" id="bgLayer" aria-hidden="true"></div>
 
+    <!-- 404 页面的独立背景图层：只在 body.nf-mode 时显形，盖在壁纸图层之上。
+         不放进 #tab-404 里，是为了避免祖先的 stacking context 把 z-index:-1 吃掉 -->
+    <div class="nf-bg" id="nfBg" aria-hidden="true"></div>
+
     <div class="layout" id="layout">
         <button class="sidebar-toggle" id="sidebarToggle" aria-label="收起或展开侧边栏" title="收起/展开"></button>
         <!-- 左侧边栏 -->
@@ -139,6 +143,7 @@
                         <div class="link-group">
                             <a href="othersite/oldlook/index.html">旧主页</a>
                             <a href="othersite/testground/index.html" target="_blank">测试区</a>
+                            <a href="#404" id="homeLink404">404 页面</a>
                         </div>
                     </section>
                 </section>
@@ -246,6 +251,18 @@
                         <h2>致谢名单</h2>
                         <div id="thanksContent"><div class="loading">加载中...</div></div>
                     </section>
+                </section>
+
+                <!-- 404 面板：hash 为 #404。没有对应的侧边栏标签按钮，
+                     由 renderTab 特判激活（未知 hash / 不存在的文章都会落到这里） -->
+                <section id="tab-404" class="tab-panel" role="region" aria-label="页面未找到">
+                    <div class="nf-stage" id="nfStage">
+                        <div class="nf-text" id="nfText">404 NOT FOUND</div>
+                        <!-- 说明卡片：内容来自 lib/words/404sents/content.md，
+                             由 BlogModule.renderCardMarkdown() 渲染（高透明 + 文字高光） -->
+                        <div class="nf-card" id="nfCard" hidden></div>
+                        <button class="nf-home" id="nfHomeBtn" type="button">回到主页</button>
+                    </div>
                 </section>
             </div>
         </main>
@@ -616,7 +633,9 @@
             /* ===== 侧边栏标签切换（hash 驱动，含浏览器历史） ===== */
             const tabs = document.querySelectorAll('.tab');
             const panels = document.querySelectorAll('.tab-panel');
-            const VALID_TAGS = ['#home', '#blog', '#empty', '#history', '#settings'];
+            // #404 也在合法路由里，但它**没有**对应的侧边栏标签按钮（错误页不该出现在导航里）
+            const VALID_TAGS = ['#home', '#blog', '#empty', '#history', '#settings', '#404'];
+            const NOT_FOUND_TAG = '404';
 
             // 只负责切换 DOM 与按需加载，绝不写 URL（供 popstate / 初始化复用）
             function renderTab(name) {
@@ -627,11 +646,19 @@
                     t.setAttribute('aria-selected', isActive ? 'true' : 'false');
                     if (isActive) active = true;
                 });
-                if (!active) name = 'home'; // 未知标签名 → 退回主页
+                // 未知标签名 → 退回主页；404 是特例：它本来就没有标签按钮
+                if (!active && name !== NOT_FOUND_TAG) name = 'home';
                 panels.forEach(function(p) {
                     const isActive = (p.id === 'tab-' + name);
                     p.classList.toggle('active', isActive);
                 });
+                // 404 页：切到它的专属背景层并暂停壁纸的"回到前台"干扰
+                const isNF = (name === NOT_FOUND_TAG);
+                document.body.classList.toggle('nf-mode', isNF);
+                if (isNF) {
+                    ensureNotFoundBackground();
+                    ensureNotFoundCard();
+                }
                 if (name === 'blog' && window.BlogModule) {
                     window.BlogModule.ensureLoaded();
                 }
@@ -655,8 +682,140 @@
                     window.BlogModule.onTabShown(resolved);
                 }
             }
-            // 暴露给 blog.js 用于激活标签（避免重复绑定）
+            // 暴露给 blog.js 用于激活标签（避免重复绑定）；
+            // 另外给 blog.js 一个"文章不存在 → 跳 404"的入口
             window.AppShowTab = showTab;
+            window.AppShow404 = function() { showTab(NOT_FOUND_TAG, 'replace'); };
+
+            /* ===== 404 页面（独立背景 + 跟随指针倾斜的标题） =====
+               背景优先级：同目录 01.txt 里的图床地址 → 失败则退回 01.jpg。
+               加载结果（host / local）记在 dataset 上，重复进入不会反复探测。
+               文字倾斜见 bindNotFoundTilt()：读的是舞台坐标，鼠标与手指通用。 */
+            const NF_TXT = 'lib/images/404page/01.txt';
+            const NF_LOCAL = 'lib/images/404page/01.jpg';
+            const nfBg = document.getElementById('nfBg');
+
+            // 预加载探针：能加载出来才算"成功"（onerror/超时都算失败）
+            function probeImage(url) {
+                return new Promise(function(resolve) {
+                    if (!url) return resolve(false);
+                    const img = new Image();
+                    let done = false;
+                    const finish = function ok(v) { if (!done) { done = true; resolve(v); } };
+                    img.onload = function() { finish(true); };
+                    img.onerror = function() { finish(false); };
+                    setTimeout(function() { finish(false); }, 8000);   // 兜底：别让坏链接把页面卡住
+                    img.src = url;
+                });
+            }
+            function applyNotFoundBg(url) {
+                if (nfBg) nfBg.style.backgroundImage = url ? "url('" + String(url).replace(/'/g, '%27') + "')" : '';
+            }
+            async function ensureNotFoundBackground() {
+                if (!nfBg) return;
+                // 已经决定过用哪张，就直接复用（不重复探测）
+                if (nfBg.dataset.loaded === '1') return;
+                let hostUrl = '';
+                try {
+                    const res = await fetch(NF_TXT, { cache: 'no-store' });
+                    if (res.ok) {
+                        const text = await res.text();
+                        const line = (text.split(/\r?\n/).find(function(l) { return l.trim() !== ''; }) || '').trim();
+                        if (/^https?:\/\//i.test(line)) hostUrl = line;
+                    }
+                } catch (e) { /* 读不到 txt：直接用本地图 */ }
+
+                if (hostUrl && await probeImage(hostUrl)) {
+                    nfBg.dataset.loaded = '1';
+                    nfBg.dataset.source = 'host';
+                    applyNotFoundBg(hostUrl);
+                    return;
+                }
+                nfBg.dataset.loaded = '1';
+                nfBg.dataset.source = 'local';
+                applyNotFoundBg(NF_LOCAL);
+            }
+
+            // 文字朝指针方向倾斜（鼠标 / 手指通用）
+            (function bindNotFoundTilt() {
+                const stage = document.getElementById('nfStage');
+                const textEl = document.getElementById('nfText');
+                if (!stage || !textEl) return;
+                const MAX_Y = 22;   // 左右最大旋转角（幅度大一些，视觉更明显）
+                const MAX_X = 12;   // 上下最大旋转角（轻微俯仰，但已经看得出来了）
+                function tilt(clientX, clientY) {
+                    const rect = stage.getBoundingClientRect();
+                    if (!rect.width || !rect.height) return;
+                    // 相对舞台中心的归一化偏移（-1 ~ 1）
+                    const dx = ((clientX - rect.left) / rect.width) * 2 - 1;
+                    const dy = ((clientY - rect.top) / rect.height) * 2 - 1;
+                    // 指针在右 → 右缘朝观察者（rotateY 取负）；指针在下 → 底缘朝观察者
+                    const ry = -dx * MAX_Y;
+                    const rx = dy * MAX_X;
+                    textEl.style.transform = 'rotateY(' + ry.toFixed(2) + 'deg) rotateX(' + rx.toFixed(2) + 'deg)';
+                }
+                function reset() { textEl.style.transform = 'rotateY(0deg) rotateX(0deg)'; }
+                stage.addEventListener('pointermove', function(e) { tilt(e.clientX, e.clientY); });
+                stage.addEventListener('pointerdown', function(e) { tilt(e.clientX, e.clientY); });
+                stage.addEventListener('pointerleave', reset);
+                stage.addEventListener('pointercancel', reset);
+            })();
+
+            /* 404 说明卡片：内容在 lib/words/404sents/content.md，
+               用 BlogModule.renderCardMarkdown() 渲染（行内语法 + 标题降级成强调行）。
+               文本只取一次；渲染器要等 blog.js 加载完才可用，所以这次没渲染成功就
+               保持隐藏、下次进入 404 再试（避免先把半成品显示出来）。 */
+            const NF_CARD_TXT = 'lib/words/404sents/content.md';
+            const nfCard = document.getElementById('nfCard');
+            let nfCardText = null;      // 取到的原文（null = 还没取过）
+            let nfCardDone = false;     // 是否已经渲染并显示
+            let nfCardTries = 0;        // 等渲染器就绪的重试次数
+
+            async function ensureNotFoundCard() {
+                if (!nfCard || nfCardDone) return;
+                if (nfCardText === null) {
+                    try {
+                        const res = await fetch(NF_CARD_TXT, { cache: 'no-store' });
+                        nfCardText = res.ok ? await res.text() : '';
+                    } catch (e) { nfCardText = ''; }
+                }
+                const body = (nfCardText || '').trim();
+                if (!body) return;      // 文件缺失/为空：这张卡片就不出现
+                const md = window.BlogModule && window.BlogModule.renderCardMarkdown;
+                if (typeof md === 'function') {
+                    nfCard.innerHTML = md(body);
+                    nfCardDone = true;
+                    nfCard.hidden = false;
+                    return;
+                }
+                // 渲染器还没就绪（blog.js 尚未执行完，直接访问 #404 时会遇到）：
+                // 先不显示，隔一会儿再试 —— 别把 Markdown 原文（## / ** 之类）露出来
+                if (nfCardTries < 20) {
+                    nfCardTries++;
+                    setTimeout(ensureNotFoundCard, 100);
+                    return;
+                }
+                // 等太久仍然没有渲染器（blog.js 加载失败？）：退化为纯文本，
+                // 顺手去掉行首的 # 标记，至少读得懂
+                nfCard.textContent = body.replace(/^[ \t]{0,3}#{1,6}[ \t]+/gm, '');
+                nfCardDone = true;
+                nfCard.hidden = false;
+            }
+
+            // 「回到主页」按钮
+            (function bindNotFoundHome() {
+                const btn = document.getElementById('nfHomeBtn');
+                if (btn) btn.addEventListener('click', function() { showTab('home', 'push'); });
+            })();
+
+            // 首页「关于其他页面」卡片里的入口（<a href="#404">：中键/Ctrl 点也能开新标签）
+            (function bindHomeNotFoundLink() {
+                const link = document.getElementById('homeLink404');
+                if (link) link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    showTab(NOT_FOUND_TAG, 'push');
+                });
+            })();
 
             tabs.forEach(function(t) {
                 t.addEventListener('click', function() {
@@ -671,20 +830,34 @@
                 // 文章级 hash 交给 blog.js 处理：它需要"先开文章再激活博客标签"，
                 // 否则主脚本的 ensureLoaded 会抢跑，错过缓存命中
                 if (/^#blog\/post\//.test(h)) return;
-                showTab(VALID_TAGS.indexOf(h) !== -1 ? h.slice(1) : 'home', 'none');
+                // 不认识的 hash → 404 页（用 replace 落定 hash，别在历史里再塞一条）
+                showTab(VALID_TAGS.indexOf(h) !== -1 ? h.slice(1) : NOT_FOUND_TAG,
+                    VALID_TAGS.indexOf(h) !== -1 ? 'none' : 'replace');
+            });
+
+            // 手动改地址栏 hash 时 popstate 不一定触发，这里补一条：
+            // 只处理"既不合法、也不是文章级"的 hash，避免和 blog.js 的 handleHash 抢活
+            window.addEventListener('hashchange', function() {
+                const h = currentHash();
+                if (VALID_TAGS.indexOf(h) !== -1 || /^#blog\/post\//.test(h)) return;
+                showTab(NOT_FOUND_TAG, 'replace');
             });
 
             // 初始：解析 hash（含文章级直达 #blog/post/<id>）或默认主页
             let initialTag = 'home';
+            let initialMode = 'replace';
             const h = currentHash();
             const isPostHash = /^#blog\/post\//.test(h);
             if (isPostHash) {
                 initialTag = 'blog'; // 文章级直达：先激活博客面板，文章打开由 blog.js 处理
+                initialMode = 'none'; // hash 必须原样保留，不能被改写成 #blog
             } else if (VALID_TAGS.indexOf(h) !== -1) {
                 initialTag = h.slice(1);
+            } else if (h && h !== '#' && h !== '#home') {
+                initialTag = NOT_FOUND_TAG; // 陌生 hash → 404
             }
-            // 首屏不产生可回退项；文章级直达的 hash 必须原样保留，不能被改写成 #blog
-            showTab(initialTag, isPostHash ? 'none' : 'replace');
+            // 首屏不产生可回退项
+            showTab(initialTag, initialMode);
 
             /* ===== 历史版本数据懒加载（缓存 + 静默更新） ===== */
             // 通用：先渲染缓存内容（若有），再网络拉取更新缓存与界面。
