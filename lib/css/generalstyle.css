@@ -29,6 +29,7 @@
     --icon-totop: url('../icons/totop_dark.png');     /* 回到顶部 */
     --icon-unfoldnavi: url('../icons/unfoldnavi_dark.png');  /* 展开导航 */
     --icon-foldnavi: url('../icons/foldnavi_dark.png');      /* 收起导航 */
+    --icon-copy: url('../icons/copy_dark.png');              /* 复制代码 */
 }
 [data-theme="dark"] {
     --bg-body: #121e2a;
@@ -45,6 +46,7 @@
     --icon-totop: url('../icons/totop_light.png');
     --icon-unfoldnavi: url('../icons/unfoldnavi_light.png');
     --icon-foldnavi: url('../icons/foldnavi_light.png');
+    --icon-copy: url('../icons/copy_light.png');
 }
 * {
     margin: 0;
