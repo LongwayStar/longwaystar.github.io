@@ -1,0 +1,5 @@
+Linux学习小记
+记录整理Linux会用到的命令等
+LongwayStar DeepSeek
+#技术笔记
+linux_explore
