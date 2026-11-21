@@ -1,0 +1,5 @@
+risc-vEMU初学习
+记录一些risc-v与cpu的学习过程与认识
+LongwayStar
+#risc-v笔记
+risc-v_study_1
