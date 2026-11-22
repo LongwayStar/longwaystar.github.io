@@ -70,6 +70,12 @@
     <link rel="icon" href="lib/icons/title.ico" />
     <link rel="stylesheet" href="lib/css/generalstyle.css" />
     <link rel="stylesheet" href="lib/css/blog.css" />
+    <!-- 历史版本页（Release / Beta 折叠卡 + 版本日志阅读视图）专用样式 -->
+    <link rel="stylesheet" href="lib/css/history.css" />
+    <!-- 代码高亮配色：只管 .md-code 里 token 的颜色，代码块布局仍在 blog.css -->
+    <link rel="stylesheet" href="lib/css/codestyle.css" />
+    <!-- 卡片内 HTML 片段的基础排版（配合 lib/js/html.js） -->
+    <link rel="stylesheet" href="lib/css/html.css" />
     <title>LongwaySite</title>
 </head>
 <body>
@@ -90,7 +96,6 @@
             <div class="tabs" role="tablist">
                 <button class="tab active" id="tabBtn-home" role="tab" aria-selected="true" data-tab="home">主页</button>
                 <button class="tab" id="tabBtn-blog" role="tab" aria-selected="false" data-tab="blog">我的博客</button>
-                <button class="tab" id="tabBtn-empty" role="tab" aria-selected="false" data-tab="empty">空白页面</button>
                 <button class="tab" id="tabBtn-history" role="tab" aria-selected="false" data-tab="history">历史版本</button>
                 <button class="tab" id="tabBtn-settings" role="tab" aria-selected="false" data-tab="settings">设置与相关</button>
             </div>
@@ -114,17 +119,8 @@
                         <hr />
                     </header>
                     <section class="card">
-                        <h2>关于Github</h2>
-                        <img
-                            class="avatar"
-                            src="https://avatars.githubusercontent.com/u/88468680?v=4&size=128"
-                            alt="my Github avatar"
-                            width="100"
-                            height="100"
-                        />
-                        <cite>LongwayStar</cite>
-                        <br />
-                        <a class="link-btn" href="https://github.com/LongwayStar" target="_blank">我的Github账号</a>
+                        <h2>关于我</h2>
+                        <div class="home-profile" data-lg-html data-lg-src="lib/documents/archive/profile/profile_card/content.html"></div>
                     </section>
                     <section class="card">
                         <h2>关于B站</h2>
@@ -143,6 +139,7 @@
                         <div class="link-group">
                             <a href="othersite/oldlook/index.html">旧主页</a>
                             <a href="othersite/testground/index.html" target="_blank">测试区</a>
+                            <a href="#empty" id="homeLinkEmpty">空白页面</a>
                             <a href="#404" id="homeLink404">404 页面</a>
                         </div>
                     </section>
@@ -150,15 +147,19 @@
 
                 <!-- 我的博客面板 -->
                 <section id="tab-blog" class="tab-panel" role="tabpanel" aria-labelledby="tabBtn-blog">
-                    <!-- ① 标题部分（页眉式） -->
+                    <!-- 宽屏：标题卡片横跨整宽；下方两列——左列文章列表、右列「筛选与排序」。
+                         筛选卡顶线与列表内容卡（.blog-browse）齐平，不高于标题卡片。
+                         阅读态隐藏筛选卡，宽度足够时右列换成常驻的文章导航（同样与内容卡同顶）。
+                         手机端自动折成单列（筛选在列表下方、分页在其后）。 -->
+                    <!-- ① 标题部分（页眉式，横跨整宽） -->
                     <header class="blog-header">
                         <h1>我的博客</h1>
                         <span class="blog-stat" id="blogStat">本站已有 <strong>0</strong> 篇文章</span>
                         <span class="blog-time" id="blogTime"></span>
                     </header>
 
-                    <div class="blog-layout">
-                        <!-- ② 文章浏览区 -->
+                    <div class="blog-layout" id="blogLayout">
+                        <!-- ② 文章浏览区（列表态 / 阅读态共用此卡片；与右列同顶） -->
                         <div class="blog-browse" id="blogBrowse">
                             <!-- 列表态 -->
                             <div id="blogListView">
@@ -180,7 +181,7 @@
                             </div>
                         </div>
 
-                        <!-- ③ 文章筛选区 -->
+                        <!-- ③ 文章筛选区（右列，阅读态下由脚本隐藏；宽度足够时右列改停靠文章导航） -->
                         <aside class="blog-filter" id="blogFilterPanel">
                             <h3>筛选与排序</h3>
                             <label class="blog-filter-label" for="blogSearchName">按名称搜索</label>
@@ -202,27 +203,36 @@
                         </aside>
                     </div>
 
-                    <!-- ④ 页面选择区 -->
+                    <!-- ④ 页面选择区（在内容区下方，横跨整宽；手机端排在筛选卡之后） -->
                     <nav class="blog-pager" id="blogPager" aria-label="分页"></nav>
                 </section>
 
                 <!-- 空白页面面板 -->
-                <section id="tab-empty" class="tab-panel" role="tabpanel" aria-labelledby="tabBtn-empty">
+                <section id="tab-empty" class="tab-panel" role="tabpanel" aria-label="空白页面">
                 </section>
 
-                <!-- 历史版本面板 -->
+                <!-- 历史版本面板：标题卡 + Release / Beta 两张折叠卡（卡片内容由 history.js 渲染）
+                     点击中版本卡片 → 同一面板内切换到「版本日志阅读视图」，返回按钮回到卡片 -->
                 <section id="tab-history" class="tab-panel" role="tabpanel" aria-labelledby="tabBtn-history">
                     <header class="header">
                         <h1>历史版本列表</h1>
                         <hr />
                     </header>
-                    <section class="card" id="releaseCard">
-                        <h2>Release 版本</h2>
-                        <div id="releaseContent"><div class="loading">加载中...</div></div>
-                    </section>
-                    <section class="card" id="betaCard">
-                        <h2>Beta 版本</h2>
-                        <div id="betaContent"><div class="loading">加载中...</div></div>
+
+                    <!-- 卡片视图：两张折叠卡由 history.js 填充 -->
+                    <div class="history-cards" id="historyCards">
+                        <div class="loading">加载中...</div>
+                    </div>
+
+                    <!-- 版本日志阅读视图（默认隐藏）：只有标题栏右侧的返回按钮，没有浮动按钮 -->
+                    <section class="history-read" id="historyRead" hidden>
+                        <div class="history-read-card">
+                            <div class="history-read-head">
+                                <h2 class="history-read-title" id="historyReadTitle"></h2>
+                                <button class="history-back" id="historyBack" type="button" title="返回版本列表" aria-label="返回版本列表"></button>
+                            </div>
+                            <div class="history-read-content" id="historyReadContent"></div>
+                        </div>
                     </section>
                 </section>
 
@@ -258,8 +268,8 @@
                 <section id="tab-404" class="tab-panel" role="region" aria-label="页面未找到">
                     <div class="nf-stage" id="nfStage">
                         <div class="nf-text" id="nfText">404 NOT FOUND</div>
-                        <!-- 说明卡片：内容来自 lib/words/404sents/content.md，
-                             由 BlogModule.renderCardMarkdown() 渲染（高透明 + 文字高光） -->
+                        <!-- 说明卡片：内容来自 lib/documents/errorsite/404site/content.md，
+                             由 Markdown 渲染器（window.LongwayMarkdown）渲染（高透明 + 文字高光） -->
                         <div class="nf-card" id="nfCard" hidden></div>
                         <button class="nf-home" id="nfHomeBtn" type="button">回到主页</button>
                     </div>
@@ -282,7 +292,9 @@
             <button class="read-fab-btn" id="fabTop" type="button" title="回到顶部" aria-label="回到顶部"></button>
         </div>
 
-        <!-- 文章导航浮层：从按钮组向左上方展开。标题列表由 blog.js 按正文的 h1/h2 动态生成 -->
+        <!-- 文章导航：窄屏 / 宽度不足时是挂在按钮组上的浮层（点「展开导航」打开）；
+             宽屏阅读态下由 blog.js 把整个节点挪进 #blogLayout 右列常驻显示，
+             此时这里的「展开导航」按钮会被隐藏。标题列表由 blog.js 按正文 h1/h2/h3 生成 -->
         <nav class="read-nav" id="readNav" aria-label="文章导航" aria-hidden="true">
             <div class="read-nav-head">
                 <span class="read-nav-title">文章导航</span>
@@ -302,7 +314,6 @@
     <script>
         (function() {
             /* ===== 模块状态（提前声明，避免 TDZ：刷新直达历史/设置页时立即加载） ===== */
-            let historyLoaded = false;
             let thanksLoaded = false;
 
             /* ===== 侧边栏收起 / 展开（含记忆功能） ===== */
@@ -633,9 +644,12 @@
             /* ===== 侧边栏标签切换（hash 驱动，含浏览器历史） ===== */
             const tabs = document.querySelectorAll('.tab');
             const panels = document.querySelectorAll('.tab-panel');
-            // #404 也在合法路由里，但它**没有**对应的侧边栏标签按钮（错误页不该出现在导航里）
+            // #404 也没有对应按钮；#empty 的侧边栏标签已撤掉（改从主页「关于其他页面」进入），
+            // 但路由仍然保留，这里必须让它们都能带着面板留下来，不能退回主页
             const VALID_TAGS = ['#home', '#blog', '#empty', '#history', '#settings', '#404'];
             const NOT_FOUND_TAG = '404';
+            // 没有侧边栏按钮、只靠 hash 直达的标签
+            const TABLESS_TAGS = { '404': 1, 'empty': 1 };
 
             // 只负责切换 DOM 与按需加载，绝不写 URL（供 popstate / 初始化复用）
             function renderTab(name) {
@@ -646,8 +660,8 @@
                     t.setAttribute('aria-selected', isActive ? 'true' : 'false');
                     if (isActive) active = true;
                 });
-                // 未知标签名 → 退回主页；404 是特例：它本来就没有标签按钮
-                if (!active && name !== NOT_FOUND_TAG) name = 'home';
+                // 未知标签名 → 退回主页；无按钮的合法标签（404 / 空白页面）保持原样
+                if (!active && !TABLESS_TAGS[name]) name = 'home';
                 panels.forEach(function(p) {
                     const isActive = (p.id === 'tab-' + name);
                     p.classList.toggle('active', isActive);
@@ -662,7 +676,7 @@
                 if (name === 'blog' && window.BlogModule) {
                     window.BlogModule.ensureLoaded();
                 }
-                if (name === 'history') loadHistory();
+                if (name === 'history' && window.HistoryModule) window.HistoryModule.ensureLoaded();
                 if (name === 'settings') loadThanks();
                 return name;
             }
@@ -681,6 +695,14 @@
                 if (window.BlogModule && window.BlogModule.onTabShown) {
                     window.BlogModule.onTabShown(resolved);
                 }
+                // 历史版本页同理：切去别的标签时若还停在某份日志里，
+                // 回到本页应回到「卡片列表」，别留着上一份日志
+                if (window.HistoryModule && window.HistoryModule.onTabShown) {
+                    window.HistoryModule.onTabShown(resolved);
+                }
+                // 标题跟着当前标签走：阅读视图的标题由 openArticle() 自己写，
+                // 切到别的标签时若不还原，标签页会一直挂着"LongwaySite-某篇文章"
+                if (resolved !== 'blog') document.title = 'LongwaySite';
             }
             // 暴露给 blog.js 用于激活标签（避免重复绑定）；
             // 另外给 blog.js 一个"文章不存在 → 跳 404"的入口
@@ -737,35 +759,40 @@
             }
 
             // 文字朝指针方向倾斜（鼠标 / 手指通用）
+            // 注意：跟随的是**整个视口**里的指针位置，不要求指针停在文字上。
             (function bindNotFoundTilt() {
-                const stage = document.getElementById('nfStage');
                 const textEl = document.getElementById('nfText');
-                if (!stage || !textEl) return;
+                if (!textEl) return;
                 const MAX_Y = 22;   // 左右最大旋转角（幅度大一些，视觉更明显）
                 const MAX_X = 12;   // 上下最大旋转角（轻微俯仰，但已经看得出来了）
                 function tilt(clientX, clientY) {
-                    const rect = stage.getBoundingClientRect();
-                    if (!rect.width || !rect.height) return;
-                    // 相对舞台中心的归一化偏移（-1 ~ 1）
-                    const dx = ((clientX - rect.left) / rect.width) * 2 - 1;
-                    const dy = ((clientY - rect.top) / rect.height) * 2 - 1;
+                    const w = window.innerWidth || 1;
+                    const h = window.innerHeight || 1;
+                    // 相对视口中心归一化（-1 ~ 1）：指针在屏幕哪个方位，文字就朝哪里倾
+                    const dx = (clientX / w) * 2 - 1;
+                    const dy = (clientY / h) * 2 - 1;
                     // 指针在右 → 右缘朝观察者（rotateY 取负）；指针在下 → 底缘朝观察者
                     const ry = -dx * MAX_Y;
                     const rx = dy * MAX_X;
                     textEl.style.transform = 'rotateY(' + ry.toFixed(2) + 'deg) rotateX(' + rx.toFixed(2) + 'deg)';
                 }
                 function reset() { textEl.style.transform = 'rotateY(0deg) rotateX(0deg)'; }
-                stage.addEventListener('pointermove', function(e) { tilt(e.clientX, e.clientY); });
-                stage.addEventListener('pointerdown', function(e) { tilt(e.clientX, e.clientY); });
-                stage.addEventListener('pointerleave', reset);
-                stage.addEventListener('pointercancel', reset);
+                // 整个文档上监听：鼠标在页面任何角落（包括文字之外的背景）都会触发
+                document.addEventListener('pointermove', function(e) { tilt(e.clientX, e.clientY); }, { passive: true });
+                document.addEventListener('pointerdown', function(e) { tilt(e.clientX, e.clientY); }, { passive: true });
+                // 指针离开窗口 / 切走标签页时回正，避免停在某个斜角上
+                document.addEventListener('pointerleave', reset);
+                window.addEventListener('blur', reset);
             })();
 
-            /* 404 说明卡片：内容在 lib/words/404sents/content.md，
-               用 BlogModule.renderCardMarkdown() 渲染（行内语法 + 标题降级成强调行）。
-               文本只取一次；渲染器要等 blog.js 加载完才可用，所以这次没渲染成功就
+            /* 404 说明卡片：内容在 lib/documents/errorsite/404site/content.md，
+               用**正文同一个** Markdown 渲染器（window.LongwayMarkdown）渲染，
+               只是关掉原始 HTML（html:false → 标签按文字显示），所以卡片里写
+               `##`、列表、表格都能正常排，写 `<b>` 只会看到字面量。
+               文本只取一次；markdown.js 要等外部脚本加载完才可用，所以这次没渲染成功就
                保持隐藏、下次进入 404 再试（避免先把半成品显示出来）。 */
-            const NF_CARD_TXT = 'lib/words/404sents/content.md';
+            const NF_CARD_TXT = 'lib/documents/errorsite/404site/content.md';
+            const NF_CARD_MD_OPTIONS = { html: false, sanitize: true };
             const nfCard = document.getElementById('nfCard');
             let nfCardText = null;      // 取到的原文（null = 还没取过）
             let nfCardDone = false;     // 是否已经渲染并显示
@@ -781,21 +808,21 @@
                 }
                 const body = (nfCardText || '').trim();
                 if (!body) return;      // 文件缺失/为空：这张卡片就不出现
-                const md = window.BlogModule && window.BlogModule.renderCardMarkdown;
+                const md = window.LongwayMarkdown && window.LongwayMarkdown.render;
                 if (typeof md === 'function') {
-                    nfCard.innerHTML = md(body);
+                    nfCard.innerHTML = md(body, NF_CARD_MD_OPTIONS);
                     nfCardDone = true;
                     nfCard.hidden = false;
                     return;
                 }
-                // 渲染器还没就绪（blog.js 尚未执行完，直接访问 #404 时会遇到）：
+                // 渲染器还没就绪（markdown.js 尚未执行完，直接访问 #404 时会遇到）：
                 // 先不显示，隔一会儿再试 —— 别把 Markdown 原文（## / ** 之类）露出来
                 if (nfCardTries < 20) {
                     nfCardTries++;
                     setTimeout(ensureNotFoundCard, 100);
                     return;
                 }
-                // 等太久仍然没有渲染器（blog.js 加载失败？）：退化为纯文本，
+                // 等太久仍然没有渲染器（脚本加载失败？）：退化为纯文本，
                 // 顺手去掉行首的 # 标记，至少读得懂
                 nfCard.textContent = body.replace(/^[ \t]{0,3}#{1,6}[ \t]+/gm, '');
                 nfCardDone = true;
@@ -823,6 +850,18 @@
                 });
             });
 
+            // hash → 标签名。'' 与 '#'（用户把地址栏里的 #… 删掉）按首页处理；
+            // 不认识的 hash 返回 null，由调用方决定落 404
+            function hashToTab(h) {
+                if (!h || h === '#') return 'home';
+                return VALID_TAGS.indexOf(h) !== -1 ? h.slice(1) : null;
+            }
+            // 当前画面是否已经停在这个标签上（404 没有侧边栏按钮，所以按面板判断）
+            function isTabActive(name) {
+                const panel = document.getElementById('tab-' + name);
+                return !!panel && panel.classList.contains('active');
+            }
+
             // 浏览器前进 / 后退：按当前位置的 hash 重建视图
             window.addEventListener('popstate', function(e) {
                 if (e.state && typeof e.state.navIdx === 'number') navIdx = e.state.navIdx;
@@ -830,17 +869,25 @@
                 // 文章级 hash 交给 blog.js 处理：它需要"先开文章再激活博客标签"，
                 // 否则主脚本的 ensureLoaded 会抢跑，错过缓存命中
                 if (/^#blog\/post\//.test(h)) return;
+                const tab = hashToTab(h);
                 // 不认识的 hash → 404 页（用 replace 落定 hash，别在历史里再塞一条）
-                showTab(VALID_TAGS.indexOf(h) !== -1 ? h.slice(1) : NOT_FOUND_TAG,
-                    VALID_TAGS.indexOf(h) !== -1 ? 'none' : 'replace');
+                showTab(tab !== null ? tab : NOT_FOUND_TAG, tab !== null ? 'none' : 'replace');
             });
 
-            // 手动改地址栏 hash 时 popstate 不一定触发，这里补一条：
-            // 只处理"既不合法、也不是文章级"的 hash，避免和 blog.js 的 handleHash 抢活
+            // 手动改地址栏 hash 时**只**触发 hashchange（不触发 popstate），
+            // 所以这里必须自己把合法标签也切过去——否则地址栏成了 #history，
+            // 画面却还停在上一个标签。
+            // 文章级 hash 仍交给 blog.js 的 handleHash，避免两处抢活。
             window.addEventListener('hashchange', function() {
                 const h = currentHash();
-                if (VALID_TAGS.indexOf(h) !== -1 || /^#blog\/post\//.test(h)) return;
-                showTab(NOT_FOUND_TAG, 'replace');
+                if (/^#blog\/post\//.test(h)) return;
+                const tab = hashToTab(h);
+                if (tab === null) {                 // 陌生 hash → 404（replace 落定，不新增历史）
+                    if (!isTabActive(NOT_FOUND_TAG)) showTab(NOT_FOUND_TAG, 'replace');
+                    return;
+                }
+                if (isTabActive(tab)) return;       // 已经在这个标签上：别重复渲染
+                showTab(tab, 'none');               // URL 已就位，只切视图、不写历史
             });
 
             // 初始：解析 hash（含文章级直达 #blog/post/<id>）或默认主页
@@ -859,10 +906,9 @@
             // 首屏不产生可回退项
             showTab(initialTag, initialMode);
 
-            /* ===== 历史版本数据懒加载（缓存 + 静默更新） ===== */
-            // 通用：先渲染缓存内容（若有），再网络拉取更新缓存与界面。
-            // emptyText 同时用于"暂无记录"与调用方传入的错误文案
-            //（网络错误的提示由各调用方自行拼好后传进来）
+            /* ===== 通用文本列表（先缓存、再静默更新） ===== */
+            // 历史版本页已改为 lib/js/history.js + history.css 独立实现，
+            // 这里只剩致谢名单在用（renderLinesTo / readListCache / writeListCache）。
             function renderLinesTo(container, lines, emptyText) {
                 if (!container) return;
                 if (!lines || lines.length === 0) {
@@ -890,52 +936,13 @@
             function writeListCache(key, lines) {
                 try { localStorage.setItem(key, JSON.stringify(lines)); } catch (e) { /* ignore */ }
             }
-            // 历史版本：对每个文件，先渲染缓存，再 fetch 更新
-            function loadVersionList(fileName, containerId, cacheKey) {
-                const container = document.getElementById(containerId);
-                const baseUrl = 'lib/words/historylist/';
-                const encodedFile = encodeURIComponent(fileName);
-                const url = baseUrl + encodedFile;
-
-                // 1) 缓存先展示
-                const cached = readListCache(cacheKey);
-                if (cached) {
-                    renderLinesTo(container, cached, '暂无版本记录', '加载失败');
-                } else if (container) {
-                    container.innerHTML = '<div class="loading">加载中...</div>';
-                }
-                // 2) 网络拉取更新
-                fetch(url, { cache: 'no-store' })
-                    .then(function(response) {
-                        if (!response.ok) throw new Error('HTTP ' + response.status);
-                        return response.text();
-                    })
-                    .then(function(text) {
-                        const lines = text.split('\n').filter(function(line) { return line.trim() !== ''; });
-                        writeListCache(cacheKey, lines);
-                        renderLinesTo(container, lines, '暂无版本记录', '加载失败');
-                    })
-                    .catch(function(error) {
-                        // 网络失败：有缓存则保留（不覆盖），无缓存则报错
-                        if (!readListCache(cacheKey) && container) {
-                            container.innerHTML = '<div class="error">加载失败: ' + error.message + '</div>';
-                        }
-                    });
-            }
-
-            function loadHistory() {
-                if (historyLoaded) return;
-                historyLoaded = true;
-                loadVersionList('BETA版本.txt', 'betaContent', 'LongwaySiteHistoryBeta');
-                loadVersionList('RELEASE版本.txt', 'releaseContent', 'LongwaySiteHistoryRelease');
-            }
 
             /* ===== 致谢名单懒加载（缓存 + 静默更新） ===== */
             async function loadThanks() {
                 if (thanksLoaded) return;
                 thanksLoaded = true;
                 const container = document.getElementById('thanksContent');
-                const url = 'lib/words/thanks/致谢名单.txt';
+                const url = 'lib/documents/archive/thanks/致谢名单.txt';
                 const cacheKey = 'LongwaySiteThanks';
 
                 // 1) 缓存先展示
@@ -979,6 +986,13 @@
             }
         })();
     </script>
+    <!-- Markdown 渲染器与语法高亮：必须先于 blog.js 加载（blog.js 只做委托） -->
+    <script src="lib/js/markdown.js"></script>
+    <script src="lib/js/highlight.js"></script>
     <script src="lib/js/blog.js"></script>
+    <!-- 历史版本页：Release / Beta 卡片 + 版本日志阅读视图（复用 markdown.js / highlight.js） -->
+    <script src="lib/js/history.js"></script>
+    <!-- 卡片内 HTML 片段的安全渲染器：自带 autoMount，没有 data-lg-html 元素时什么都不做 -->
+    <script src="lib/js/html.js"></script>
 </body>
 </html>

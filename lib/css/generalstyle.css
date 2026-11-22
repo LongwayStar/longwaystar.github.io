@@ -30,6 +30,8 @@
     --icon-unfoldnavi: url('../icons/unfoldnavi_dark.png');  /* 展开导航 */
     --icon-foldnavi: url('../icons/foldnavi_dark.png');      /* 收起导航 */
     --icon-copy: url('../icons/copy_dark.png');              /* 复制代码 */
+    --icon-pageswitch: url('../icons/pageswitch_dark.png');  /* 历史版本：切换大版本（右箭头） */
+    --icon-foldmenu: url('../icons/foldmenu_dark.png');      /* 文章导航：折叠/展开目录组（右箭头） */
 }
 [data-theme="dark"] {
     --bg-body: #121e2a;
@@ -47,6 +49,8 @@
     --icon-unfoldnavi: url('../icons/unfoldnavi_light.png');
     --icon-foldnavi: url('../icons/foldnavi_light.png');
     --icon-copy: url('../icons/copy_light.png');
+    --icon-pageswitch: url('../icons/pageswitch_light.png');
+    --icon-foldmenu: url('../icons/foldmenu_light.png');
 }
 * {
     margin: 0;
@@ -302,7 +306,8 @@ body {
     margin-left: 0;
 }
 .container {
-    max-width: 720px;
+    max-width: 75vw;   /* 宽屏时内容（所有卡片）最宽占屏幕 75%；
+                          窄屏下 75vw 大于可用宽度时自然退化为 100%（见下方手机端覆盖） */
     margin: 0 auto;
     width: 100%;
     display: flex;
@@ -416,32 +421,6 @@ body {
   max-width: 500px;
 }
 
-/* 历史版本面板内卡片使用列居中布局 */
-#tab-history .card {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-#tab-history .card h2 {
-    align-self: center;
-}
-#tab-history .version-list {
-    display: inline-block;
-    text-align: left;
-    margin: 0.5rem auto 0;
-    padding-left: 0;
-    list-style: none;
-    color: var(--text-secondary);
-    font-size: 1rem;
-    line-height: 2;
-    width: 100%;
-    max-width: 400px;
-}
-#tab-history .version-list li::before {
-    content: "• ";
-    color: var(--cyan-500);
-    font-weight: bold;
-}
 .loading {
     color: var(--text-secondary);
     font-size: 1rem;
@@ -511,7 +490,9 @@ body {
     color: var(--footer-color);
     font-size: 0.85rem;
     line-height: 1.8;
-    white-space: nowrap;
+    /* 不再 nowrap：极窄屏（≤240px）时"Powered by …"这类整句会被裁掉一半，
+       允许换行后文字至少完整可见；footer-content 本身是 flex-wrap，行与行仍分开 */
+    overflow-wrap: anywhere;
 }
 
 /* ---------- 头像（主页卡片） ---------- */
@@ -624,6 +605,7 @@ body {
     }
     .container {
         gap: 1.5rem;
+        max-width: none;   /* 手机端不按 75vw 收窄，保持满宽（75vw 只在宽屏生效） */
     }
     .tab-panel.active {
         gap: 1.5rem;
@@ -746,6 +728,19 @@ body {
     font-display: swap;
 }
 
+/* 代码字体：JetBrains Mono。
+   下载文件是**变量字体**（文件名里的 [wght] 就是可变字重），一个文件覆盖 100~900，
+   所以这里用 `font-weight: 100 900` 声明区间；老浏览器不认区间时按 400 正常渲染。
+   注意：文件名带方括号，url() 里必须用 %5B / %5D 转义，否则会被当成 CSS 语法。
+   引用位置见 blog.css（正文代码块/行内代码）与下面的 .nf-card（404 卡片里的代码）。 */
+@font-face {
+    font-family: 'JetBrains Mono';
+    src: url('../fonts/JetBrainsMono%5Bwght%5D.ttf') format('truetype');
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: swap;
+}
+
 /* 独立背景层：平时不可见，body.nf-mode 时盖在壁纸图层之上 */
 .nf-bg {
     position: fixed;
@@ -810,7 +805,7 @@ body.nf-mode .nf-bg {
 }
 
 /* 说明卡片：**高透明**（尽量让背景图透出来）+ 文字高光（压在照片上也读得清）。
-   内容由 lib/words/404sents/content.md 渲染而来 */
+   内容由 lib/documents/errorsite/404site/content.md 渲染而来 */
 .nf-card {
     max-width: min(38rem, 88vw);
     padding: 1rem 1.5rem;
@@ -835,25 +830,70 @@ body.nf-mode .nf-bg {
 .nf-card[hidden] {
     display: none;
 }
-/* 渲染器把 Markdown 标题降级成这个"强调行" */
-.nf-card .card-md-h {
-    display: block;
+/* 卡片正文：由 Markdown 渲染器输出的**真正块级结构**（标题 / 段落 / 列表 / 代码），
+   不再有"标题降级成强调行"那套。首尾元素去掉外边距，免得卡片上下多出空隙。 */
+.nf-card > :first-child {
+    margin-top: 0;
+}
+.nf-card > :last-child {
+    margin-bottom: 0;
+}
+.nf-card h1,
+.nf-card h2,
+.nf-card h3,
+.nf-card h4,
+.nf-card h5,
+.nf-card h6 {
+    margin: 0.6em 0 0.35em;
     font-size: 1.12em;
     font-weight: 700;
+    line-height: 1.5;
     color: rgba(236, 254, 255, 0.98);
     text-shadow:
         0 1px 2px rgba(0, 0, 0, 0.85),
         0 0 14px rgba(103, 232, 249, 0.5);
+}
+.nf-card p {
+    margin: 0.5em 0;
+}
+.nf-card ul,
+.nf-card ol {
+    margin: 0.5em 0;
+    padding-left: 1.5em;
+    text-align: left;
+}
+.nf-card li {
+    margin: 0.2em 0;
+}
+.nf-card blockquote {
+    margin: 0.6em 0;
+    padding: 0.2em 0.9em;
+    border-left: 2px solid rgba(103, 232, 249, 0.6);
+    color: rgba(226, 240, 250, 0.86);
+    text-align: left;
+}
+.nf-card pre {
+    margin: 0.6em 0;
+    padding: 0.7em 0.9em;
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.38);
+    overflow-x: auto;
+    text-align: left;
 }
 .nf-card a {
     color: var(--cyan-300);
     text-underline-offset: 0.2em;
 }
 .nf-card code {
+    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     padding: 0.1em 0.35em;
     border-radius: 5px;
     background: rgba(0, 0, 0, 0.35);
     font-size: 0.92em;
+}
+.nf-card pre code {
+    padding: 0;
+    background: none;
 }
 
 /* 「回到主页」按钮 */.nf-home {

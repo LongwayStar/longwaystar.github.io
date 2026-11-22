@@ -1,0 +1,214 @@
+/* ============================================================
+   LongwaySite 代码高亮配色 (codestyle.css)
+   —— 本文件只负责「token 颜色」，不含任何布局。
+   代码块卡片的边框/圆角/标题栏/复制按钮/滚动等排版全部在
+   lib/css/blog.css 的 .md-code 系列里，改布局请去那边，别往这里加。
+
+   约定：
+   1) 所有颜色都走 --code-* 变量，浅色在 :root、深色在
+      [data-theme="dark"]，两套必须成对，新增变量时一起补。
+   2) 所有规则都限定在 .md-code 作用域内，不污染正文里的其它代码。
+   3) 只改 color / font-style / font-weight / opacity；
+      不改字号、不改背景、不用 !important。
+   4) 没有任何 span 的纯代码不在这里设颜色，沿用页面正文的
+      var(--text-primary)，和普通文字保持一致。
+
+   ---------- 新增语言三步走 ----------
+   ① 在 lib/js/highlight.js 里写 tokenizer 并注册：
+        register('go', { aliases: ['go', 'golang'], tokenize: tokenizeGo });
+   ② 归一别名：别名写进上面 register 的 aliases 数组（大小写自动归一），
+      规范 id 就是 .md-code 上 data-lang 的值。
+   ③ 在本文件里按需加语言覆盖（不加也能用，会走下面的通用配色）：
+        .md-code[data-lang="go"] .tok-keyword { color: var(--code-keyword); }
+      如果这门语言需要新 token 词（例如 Go 的内置函数想单独一色），
+      先在 highlight.js 的 TOKEN_TYPES 里登记词名，再在这里补一条
+      .md-code .tok-xxx { color: var(--code-xxx); } 和对应变量。
+   三件事做完，Markdown 渲染器那边一行都不用动。
+
+   ---------- token 词表 ↔ 变量对照 ----------
+   tok-comment → --code-comment      tok-string   → --code-string
+   tok-escape  → --code-escape       tok-number   → --code-number
+   tok-keyword → --code-keyword      tok-keyword-flow → --code-keyword-flow
+   tok-type    → --code-type         tok-function → --code-function
+   tok-builtin → --code-builtin      tok-variable → --code-variable
+   tok-parameter → --code-parameter  tok-constant → --code-constant
+   tok-operator → --code-operator    tok-punct    → --code-punct
+   tok-preproc → --code-preproc      tok-directive → --code-directive
+   tok-macro   → --code-macro        tok-label    → --code-label
+   tok-register → --code-register    tok-mnemonic → --code-mnemonic
+   tok-decorator → --code-decorator  tok-attr     → --code-attr
+   tok-namespace → --code-namespace  tok-regex    → --code-regex
+   ============================================================ */
+
+/* ---------- 浅色主题（参考 VS Code Light+） ---------- */
+:root {
+    --code-comment: #008000;          /* 注释：绿 */
+    --code-string: #a31515;           /* 字符串：暗红 */
+    --code-escape: #ee0000;           /* 转义序列：亮红 */
+    --code-number: #098658;           /* 数字：青绿 */
+    --code-keyword: #0000ff;          /* 关键字：蓝 */
+    --code-keyword-flow: #af00db;     /* 流程控制：紫 */
+    --code-type: #267f99;             /* 类型/类名：蓝绿 */
+    --code-function: #795e26;         /* 函数名：金褐 */
+    --code-builtin: #267f99;          /* 内置名：蓝绿 */
+    --code-variable: #001080;         /* 变量（含 self/cls）：深蓝 */
+    --code-parameter: #001080;        /* 形参：深蓝 */
+    --code-constant: #0070c1;         /* 常量：蓝 */
+    --code-operator: #000000;         /* 运算符：正文色 */
+    --code-punct: #000000;            /* 标点：正文色 */
+    --code-preproc: #800000;          /* 预处理指令：枣红 */
+    --code-directive: #800000;        /* 汇编伪指令：枣红 */
+    --code-macro: #795e26;            /* 宏名：金褐 */
+    --code-label: #795e26;            /* 标签：金褐 */
+    --code-register: #001080;         /* 寄存器：深蓝 */
+    --code-mnemonic: #0000ff;         /* 助记符：蓝 */
+    --code-decorator: #795e26;        /* 装饰器：金褐 */
+    --code-attr: #267f99;             /* 属性/注解字段：蓝绿 */
+    --code-namespace: #267f99;        /* 命名空间/模块：蓝绿 */
+    --code-regex: #811f3f;            /* 正则字面量：暗玫红 */
+}
+
+/* ---------- 深色主题（参考 VS Code Dark+） ---------- */
+[data-theme="dark"] {
+    --code-comment: #6a9955;
+    --code-string: #ce9178;
+    --code-escape: #d7ba7d;
+    --code-number: #b5cea8;
+    --code-keyword: #569cd6;
+    --code-keyword-flow: #c586c0;
+    --code-type: #4ec9b0;
+    --code-function: #dcdcaa;
+    --code-builtin: #4ec9b0;
+    --code-variable: #9cdcfe;
+    --code-parameter: #9cdcfe;
+    --code-constant: #4fc1ff;
+    --code-operator: #d4d4d4;
+    --code-punct: #d4d4d4;
+    --code-preproc: #c586c0;
+    --code-directive: #c586c0;
+    --code-macro: #4ec9b0;
+    --code-label: #dcdcaa;
+    --code-register: #9cdcfe;
+    --code-mnemonic: #569cd6;
+    --code-decorator: #4fc1ff;
+    --code-attr: #9cdcff;
+    --code-namespace: #4ec9b0;
+    --code-regex: #d16969;
+}
+
+/* ---------- 通用 token 配色 ----------
+   一律挂在 .md-code 下面：博客正文里偶尔也会写 <code>，
+   不加作用域会把正文的行内代码一起改掉。 */
+.md-code .tok-comment {
+    color: var(--code-comment);
+}
+.md-code .tok-string {
+    color: var(--code-string);
+}
+.md-code .tok-escape {
+    color: var(--code-escape);
+}
+.md-code .tok-number {
+    color: var(--code-number);
+}
+.md-code .tok-keyword {
+    color: var(--code-keyword);
+}
+.md-code .tok-keyword-flow {
+    color: var(--code-keyword-flow);
+}
+.md-code .tok-type {
+    color: var(--code-type);
+}
+.md-code .tok-function {
+    color: var(--code-function);
+}
+.md-code .tok-builtin {
+    color: var(--code-builtin);
+}
+.md-code .tok-variable {
+    color: var(--code-variable);
+}
+.md-code .tok-parameter {
+    color: var(--code-parameter);
+}
+.md-code .tok-constant {
+    color: var(--code-constant);
+}
+.md-code .tok-operator {
+    color: var(--code-operator);
+}
+.md-code .tok-punct {
+    color: var(--code-punct);
+}
+.md-code .tok-preproc {
+    color: var(--code-preproc);
+}
+.md-code .tok-directive {
+    color: var(--code-directive);
+}
+.md-code .tok-macro {
+    color: var(--code-macro);
+}
+.md-code .tok-label {
+    color: var(--code-label);
+}
+.md-code .tok-register {
+    color: var(--code-register);
+}
+.md-code .tok-mnemonic {
+    color: var(--code-mnemonic);
+}
+.md-code .tok-decorator {
+    color: var(--code-decorator);
+}
+.md-code .tok-attr {
+    color: var(--code-attr);
+}
+.md-code .tok-namespace {
+    color: var(--code-namespace);
+}
+.md-code .tok-regex {
+    color: var(--code-regex);
+}
+
+/* ---------- 语言级微调（扩展点示例，全是「轻微」差异） ----------
+   选择器写法：.md-code[data-lang="<规范 id>"] .tok-xxx
+   只动字重/字斜，不动字号与背景。 */
+
+/* C：预处理器行与宏名最容易和正文混在一起，加一点字重区分 */
+.md-code[data-lang="c"] .tok-preproc {
+    font-weight: 600;
+}
+.md-code[data-lang="c"] .tok-macro {
+    font-style: italic;
+}
+
+/* 汇编：助记符是阅读骨架，加重；.text/.globl 之类伪指令用斜体，
+   避免和助记符（同为蓝色系）混淆 */
+.md-code[data-lang="asm"] .tok-mnemonic {
+    font-weight: 600;
+}
+.md-code[data-lang="asm"] .tok-directive {
+    font-style: italic;
+}
+.md-code[data-lang="asm"] .tok-label {
+    font-style: italic;
+}
+
+/* Python：装饰器和内置名成对出现，斜体区分装饰器 */
+.md-code[data-lang="python"] .tok-decorator {
+    font-style: italic;
+}
+
+/* Shell：命令名加重，变量用斜体，选项（-x / --long）略淡，
+   这样「命令 / 参数 / 展开」三层一眼分得开 */
+.md-code[data-lang="shell"] .tok-function {
+    font-weight: 600;
+}
+.md-code[data-lang="shell"] .tok-variable {
+    font-style: italic;
+}
+.md-code[data-lang="shell"] .tok-parameter {
+    opacity: 0.85;
+}

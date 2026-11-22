@@ -1,7 +1,0 @@
-﻿c_study_1
-life_in_militrain
-linux_explore
-risc-v_study_1
-site_info_1
-site_info_2
-test_1
